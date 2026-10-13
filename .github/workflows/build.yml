@@ -14,7 +14,7 @@ jobs:
           java-version: 21
       - run: |
           npm init -y
-          npm i @capacitor/core @capacitor/cli @capacitor/android
+          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/filesystem @capacitor/share
           mkdir www && cp index.html www/
           npx cap init "Floor Plan" com.example.floorplan --web-dir www
           npx cap add android
@@ -22,5 +22,5 @@ jobs:
           cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: floor-plan-apk
+          name: floorplan-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
