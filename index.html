@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Floor Plan Grid</title>
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--tx:#1d2420;--mut:#6b756f;--ac:#0f766e;--acbg:#d7efec;--bd:#d9ded9;--cv:#fff;--g1:#eef0ec;--g2:#d3d8d2;--g3:#98a39b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111614;--card:#1a211e;--tx:#e8eeea;--mut:#92a09a;--ac:#2dd4bf;--acbg:#14403b;--bd:#28312d;--cv:#2b332f;--g1:#323b36;--g2:#415049;--g3:#6d7f76}}
+:root[data-theme="dark"]{--bg:#111614;--card:#1a211e;--tx:#e8eeea;--mut:#92a09a;--ac:#2dd4bf;--acbg:#14403b;--bd:#28312d;--cv:#2b332f;--g1:#323b36;--g2:#415049;--g3:#6d7f76}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+button{font:inherit;font-size:14px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:9px 11px;cursor:pointer;white-space:nowrap}
+button.on{background:var(--acbg);border-color:var(--ac)}
+.top{display:flex;gap:6px;padding:6px}
+#md{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600}
+.dot{display:inline-block;width:12px;height:12px;border-radius:3px}
+input{font:inherit;width:62px;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}
+#wrap{flex:1;min-height:0;position:relative;touch-action:none;border-top:1px solid var(--bd)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#bk{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:5}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:65%;overflow:auto;background:var(--bg);border-radius:16px 16px 0 0;padding:12px 12px calc(14px + env(safe-area-inset-bottom,0px));display:none;z-index:6;box-shadow:0 -4px 20px rgba(0,0,0,.25)}
+body.open #bk,body.open #sheet{display:block}
+.sh{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px}
+.sl{font-size:12px;color:var(--mut);margin:14px 0 6px}
+.rw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.rw>button{flex:1 1 auto}
+#pal{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.chip{display:flex;flex-direction:column;align-items:flex-start;font-size:13px;line-height:1.25}
+.chip i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chip small{color:var(--mut);font-size:11px}
+#st{font-size:12px;color:var(--mut);margin-top:12px}
+canvas{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:9;align-items:center;justify-content:center;padding:14px}
+body.ovo #ov{display:flex}
+.ovb{background:var(--bg);border-radius:14px;padding:12px;max-width:100%;max-height:100%;overflow:auto}
+#oi{max-width:100%;max-height:55vh;display:block;margin:8px auto;border:1px solid var(--bd);background:#fff}
+.btn{flex:1;text-align:center;padding:9px 11px;border:1px solid var(--ac);background:var(--acbg);color:var(--tx);border-radius:10px;text-decoration:none;font-size:14px}
+</style>
+</head>
+<body>
+<div class="top">
+  <button id="mn">&#9881; Menu</button>
+  <button id="md"></button>
+  <button id="un">Undo</button><button id="rd">Redo</button>
+</div>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="bk"></div>
+<div id="sheet">
+  <div class="sh"><span>Settings</span><button id="cl">Done</button></div>
+  <div class="sl">Tip: scroll normally with one finger. To draw, touch and HOLD on the grid for a moment, then drag. Near the screen edge it scrolls by itself.</div>
+  <div class="sl">DRAWING TOOL</div>
+  <div class="rw"><button data-t="pen">Pen</button><button data-t="fill">Fill</button><button data-t="box">Box</button><button data-t="erase">Erase</button></div>
+  <div class="sl">TYPE (with area)</div>
+  <div id="pal"></div>
+  <div class="sl">PLOT SIZE (feet)</div>
+  <div class="rw"><span>W</span><input id="w" type="number" inputmode="numeric" value="30"><span>L</span><input id="l" type="number" inputmode="numeric" value="60"><button id="ap">Apply</button></div>
+  <div class="sl">ZOOM (grid size)</div>
+  <div class="rw"><button id="zm" style="flex:0">&minus;</button><input id="zs" type="range" min="2" max="80" value="16" style="flex:1;width:auto;padding:0"><button id="zp" style="flex:0">+</button><button id="ft">Fit all</button></div>
+  <div class="sl">SAVE PLAN</div>
+  <div class="rw"><button id="sp">Save as image</button><button id="sf">Save as PDF</button></div>
+  <div class="sl">PLAN</div>
+  <div class="rw"><button id="clr">Clear all</button></div>
+  <div id="st"></div>
+</div>
+
+<div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
+<script>
+const $=id=>document.getElementById(id);
+const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fde68a'},{n:'Door',c:'#b45309'},{n:'Window',c:'#38bdf8'},{n:'Kitchen',c:'#fb923c'},{n:'Bath',c:'#5eead4'},{n:'Stairs',c:'#a78bfa'},{n:'Lawn',c:'#86efac'}];
+const TN={pen:'Pen',fill:'Fill',box:'Box',erase:'Erase'};
+const HX=30,HY=20;
+let W=30,L=60,cols=0,rows=0,g=null,sc=16,ox=HX,oy=HY,tool='pen',cur=1,hist=[],redo=[],cw=0,ch=0,rc=null,raf=0,lastZ=0,flOn=false,st=null,pz=null,CL={};
+const cv=$('cv'),ctx=cv.getContext('2d'),wrap=$('wrap');
+function colors(){const s=getComputedStyle(document.documentElement),f=v=>s.getPropertyValue(v).trim();CL={cv:f('--cv'),g1:f('--g1'),g2:f('--g2'),g3:f('--g3'),card:f('--card'),mut:f('--mut')}}
+function setDims(w,l,keep){const nc=Math.round(w*2),nr=Math.round(l*2),ng=new Uint8Array(nc*nr);
+  if(keep&&g){for(let r=0;r<Math.min(nr,rows);r++)for(let c=0;c<Math.min(nc,cols);c++)ng[r*nc+c]=g[r*cols+c]}
+  W=w;L=l;cols=nc;rows=nr;g=ng;$('w').value=w;$('l').value=l}
+function size(){const d=window.devicePixelRatio||1;cw=wrap.clientWidth;ch=wrap.clientHeight;cv.width=cw*d;cv.height=ch*d;ctx.setTransform(d,0,0,d,0,0);rc=cv.getBoundingClientRect();colors();clampView();draw()}
+function clampView(){const aw=cw-HX,ah=ch-HY;ox=cols*sc<=aw?HX:Math.min(HX,Math.max(cw-cols*sc,ox));oy=rows*sc<=ah?HY:Math.min(HY,Math.max(ch-rows*sc,oy))}
+function view(s){sc=s;ox=HX;oy=HY;clampView();draw();stats()}
+function fit(){sc=Math.max(2,Math.min((cw-HX)/cols,(ch-HY)/rows));ox=HX;oy=HY;clampView();draw();stats()}
+function setZoom(n){n=Math.min(80,Math.max(2,n));const cx=cw/2,cy=ch/2,wx=(cx-ox)/sc,wy=(cy-oy)/sc;sc=n;ox=cx-wx*n;oy=cy-wy*n;clampView();draw()}
+function draw(){if(!raf){raf=1;requestAnimationFrame(()=>{raf=0;render()})}}
+function render(){
+  ctx.clearRect(0,0,cw,ch);
+  const z=Math.round(sc);if(z!==lastZ){lastZ=z;$('zs').value=z}
+  ctx.save();ctx.beginPath();ctx.rect(HX,HY,cw-HX,ch-HY);ctx.clip();
+  ctx.fillStyle=CL.cv;ctx.fillRect(ox,oy,cols*sc,rows*sc);
+  const c0=Math.max(0,Math.floor(-ox/sc)),c1=Math.min(cols,Math.ceil((cw-ox)/sc)),r0=Math.max(0,Math.floor(-oy/sc)),r1=Math.min(rows,Math.ceil((ch-oy)/sc));
+  for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){const v=g[r*cols+c];if(v){ctx.fillStyle=T[v-1].c;ctx.fillRect(ox+c*sc,oy+r*sc,sc+0.5,sc+0.5)}}
+  const gl=(step,col,lw)=>{ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();
+    for(let c=Math.ceil(c0/step)*step;c<=c1;c+=step){const x=ox+c*sc;ctx.moveTo(x,oy+r0*sc);ctx.lineTo(x,oy+r1*sc)}
+    for(let r=Math.ceil(r0/step)*step;r<=r1;r+=step){const y=oy+r*sc;ctx.moveTo(ox+c0*sc,y);ctx.lineTo(ox+c1*sc,y)}ctx.stroke()};
+  if(sc>=14)gl(1,CL.g1,0.5);if(sc>=5)gl(2,CL.g2,0.5);gl(10,CL.g3,1);
+  ctx.strokeStyle=CL.g3;ctx.lineWidth=2;ctx.strokeRect(ox,oy,cols*sc,rows*sc);
+  if(st&&(st.t==='fill'||st.t==='box')){const a=Math.min(st.a.c,st.b.c),b=Math.max(st.a.c,st.b.c),c=Math.min(st.a.r,st.b.r),d=Math.max(st.a.r,st.b.r);
+    ctx.fillStyle=T[cur-1].c;ctx.globalAlpha=st.t==='fill'?0.55:0.25;ctx.fillRect(ox+a*sc,oy+c*sc,(b-a+1)*sc,(d-c+1)*sc);ctx.globalAlpha=1;
+    ctx.strokeStyle=T[cur-1].c;ctx.lineWidth=2;ctx.strokeRect(ox+a*sc,oy+c*sc,(b-a+1)*sc,(d-c+1)*sc)}
+  ctx.restore();headers();
+}
+function headers(){
+  ctx.fillStyle=CL.card;ctx.fillRect(0,0,cw,HY);ctx.fillRect(0,0,HX,ch);
+  ctx.strokeStyle=CL.g3;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,HY);ctx.lineTo(cw,HY);ctx.moveTo(HX,0);ctx.lineTo(HX,ch);ctx.stroke();
+  ctx.fillStyle=CL.mut;ctx.font='11px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  const s=[1,2,5,10,20,50].find(x=>x*sc>=26)||50;
+  for(let c=Math.max(0,Math.floor((HX-ox)/sc));c<Math.min(cols,Math.ceil((cw-ox)/sc));c++)if(c===0||(c+1)%s===0){const x=ox+c*sc+sc/2;if(x>HX+8)ctx.fillText(c+1,x,HY/2)}
+  for(let r=Math.max(0,Math.floor((HY-oy)/sc));r<Math.min(rows,Math.ceil((ch-oy)/sc));r++)if(r===0||(r+1)%s===0){const y=oy+r*sc+sc/2;if(y>HY+8)ctx.fillText(r+1,HX/2,y)}}
+function put(c,r,v){if(c>=0&&r>=0&&c<cols&&r<rows)g[r*cols+c]=v}
+function lineTo(a,b,v){let x=a.c,y=a.r,dx=Math.abs(b.c-x),dy=-Math.abs(b.r-y),sx=x<b.c?1:-1,sy=y<b.r?1:-1,e=dx+dy;
+  for(let i=0;i<2000;i++){put(x,y,v);if(x===b.c&&y===b.r)break;const e2=2*e;if(e2>=dy){e+=dy;x+=sx}if(e2<=dx){e+=dx;y+=sy}}}
+function rect(a,b,mode,v){const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Math.min(a.r,b.r),r1=Math.max(a.r,b.r);
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)if(mode==='fill'||r===r0||r===r1||c===c0||c===c1)put(c,r,v)}
+function stats(){const n=new Array(T.length+1).fill(0);for(let i=0;i<g.length;i++)n[g[i]]++;
+  let tot=0;T.forEach((t,i)=>{tot+=n[i+1];$('pal').children[i].querySelector('small').textContent=(+(n[i+1]/4).toFixed(2))+' sq ft'});
+  $('st').textContent=`Plot ${W}\u00d7${L} ft = ${W*L} sq ft \u00b7 Painted ${+(tot/4).toFixed(2)} sq ft \u00b7 1 cell = 6 in`}
+function save(){try{localStorage.setItem('fp_v1',JSON.stringify({W,L,d:Array.from(g).join('')}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem('fp_v1'));if(s&&s.W&&s.L&&s.d){setDims(s.W,s.L,false);for(let i=0;i<g.length&&i<s.d.length;i++)g[i]=+s.d[i]}}catch(e){}}
+const same=(a,b)=>{if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true};
+function commit(){if(!same(hist[hist.length-1],g)){hist.push(g.slice());if(hist.length>60)hist.shift();redo=[]}}
+
+/* fast fling scroll */
+function fling(vx,vy){let last=performance.now();flOn=true;
+  const step=t=>{if(!flOn)return;const dt=Math.min(32,Math.max(1,t-last));last=t;const px=ox,py=oy;ox+=vx*dt;oy+=vy*dt;clampView();
+    if(ox!==px+vx*dt)vx=0;if(oy!==py+vy*dt)vy=0;const f=Math.pow(0.998,dt);vx*=f;vy*=f;render();
+    if(Math.hypot(vx,vy)>0.03)requestAnimationFrame(step);else flOn=false};
+  requestAnimationFrame(step)}
+
+/* touch / mouse */
+const P=new Map();let as=false;
+const pos=e=>({x:e.clientX-rc.left,y:e.clientY-rc.top});
+const cellAt=(x,y)=>({c:Math.floor((x-ox)/sc),r:Math.floor((y-oy)/sc)});
+function endDraw(apply){if(!st||st.t==='hand'||st.t==='pending')return;if(apply&&(st.t==='fill'||st.t==='box'))rect(st.a,st.b,st.t,cur);commit();save();stats()}
+function activate(){if(!st||st.t!=='pending')return;const c=cellAt(st.x,st.y);st.t=tool;st.a=c;st.b=c;st.p={x:st.x,y:st.y};
+  if(tool==='pen'||tool==='erase')put(c.c,c.r,tool==='erase'?0:cur);
+  try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
+  draw();if(!as){as=true;requestAnimationFrame(auto)}}
+function auto(){if(!st||st.t==='hand'||st.t==='pending'){as=false;return}
+  const p=st.p,E=56,V=14;let dx=0,dy=0;
+  if(p.x>cw-E)dx=-(p.x-(cw-E))/E;else if(p.x<HX+E)dx=(HX+E-p.x)/E;
+  if(p.y>ch-E)dy=-(p.y-(ch-E))/E;else if(p.y<HY+E)dy=(HY+E-p.y)/E;
+  dx=Math.max(-1,Math.min(1,dx));dy=Math.max(-1,Math.min(1,dy));
+  if(dx||dy){const px=ox,py=oy;ox+=dx*V;oy+=dy*V;clampView();
+    if(ox!==px||oy!==py){const c=cellAt(p.x,p.y);if(st.t==='pen'||st.t==='erase')lineTo(st.b,c,st.t==='erase'?0:cur);st.b=c;draw()}}
+  requestAnimationFrame(auto)}
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{rc=cv.getBoundingClientRect();const p=pos(e);if(p.x<HX||p.y<HY)return;flOn=false;cv.setPointerCapture(e.pointerId);P.set(e.pointerId,p);
+  if(P.size===2){if(st&&st.t==='pending')clearTimeout(st.timer);else endDraw(false);st=null;const [a,b]=[...P.values()];pz={d:Math.hypot(a.x-b.x,a.y-b.y)||1,sc,x:(a.x+b.x)/2,y:(a.y+b.y)/2,ox,oy};draw();return}
+  if(P.size>2)return;
+  st={t:'pending',x:p.x,y:p.y,vx:0,vy:0,ts:e.timeStamp,timer:setTimeout(activate,260)}});
+cv.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;const p=pos(e);P.set(e.pointerId,p);
+  if(P.size===2&&pz){const [a,b]=[...P.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    const ns=Math.min(80,Math.max(2,pz.sc*d/pz.d)),wx=(pz.x-pz.ox)/pz.sc,wy=(pz.y-pz.oy)/pz.sc;sc=ns;ox=mx-wx*ns;oy=my-wy*ns;clampView();draw();return}
+  if(!st)return;
+  if(st.t==='pending'){if(Math.hypot(p.x-st.x,p.y-st.y)<10)return;clearTimeout(st.timer);st.t='hand';st.ts=e.timeStamp}
+  if(st.t==='hand'){const dx=p.x-st.x,dy=p.y-st.y,dt=Math.max(1,e.timeStamp-st.ts);
+    st.vx=0.7*st.vx+0.3*dx/dt;st.vy=0.7*st.vy+0.3*dy/dt;st.ts=e.timeStamp;ox+=dx;oy+=dy;st.x=p.x;st.y=p.y;clampView();draw();return}
+  st.p=p;const c=cellAt(p.x,p.y);
+  if(st.t==='pen'||st.t==='erase')lineTo(st.b,c,st.t==='erase'?0:cur);
+  st.b=c;draw()});
+const up=e=>{if(!P.has(e.pointerId))return;P.delete(e.pointerId);if(P.size<2)pz=null;
+  if(st&&P.size===0){
+    if(st.t==='pending')clearTimeout(st.timer);
+    else if(st.t==='hand'){if(e.timeStamp-st.ts<80&&Math.hypot(st.vx,st.vy)>0.2)fling(st.vx*1.5,st.vy*1.5)}
+    else endDraw(true);
+    st=null;draw()}};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();rc=cv.getBoundingClientRect();const p=pos(e),ns=Math.min(80,Math.max(2,sc*(e.deltaY<0?1.15:1/1.15))),wx=(p.x-ox)/sc,wy=(p.y-oy)/sc;sc=ns;ox=p.x-wx*sc;oy=p.y-wy*sc;clampView();draw()},{passive:false});
+
+/* UI */
+function ui(){const t=T[cur-1];
+  $('md').innerHTML=`<i class="dot" style="background:${t.c}"></i>${TN[tool]} \u00b7 ${t.n}`;
+  document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===tool));
+  [...$('pal').children].forEach((x,j)=>x.classList.toggle('on',j+1===cur))}
+function setTool(t){tool=t;ui()}
+T.forEach((t,i)=>{const b=document.createElement('button');b.className='chip';
+  b.innerHTML=`<span><i style="background:${t.c}"></i>${t.n}</span><small>0 sq ft</small>`;
+  b.onclick=()=>{cur=i+1;if(tool==='erase')tool='pen';ui()};$('pal').appendChild(b)});
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTool(b.dataset.t));
+$('md').onclick=()=>{const o=['pen','fill','box','erase'];setTool(o[(o.indexOf(tool)+1)%4])};
+const sheet=o=>document.body.classList.toggle('open',o);
+$('mn').onclick=()=>sheet(true);$('cl').onclick=()=>sheet(false);$('bk').onclick=()=>sheet(false);
+$('un').onclick=()=>{if(hist.length>1){redo.push(hist.pop());g=hist[hist.length-1].slice();save();stats();draw()}};
+$('rd').onclick=()=>{if(redo.length){const s=redo.pop();hist.push(s);g=s.slice();save();stats();draw()}};
+$('ft').onclick=()=>{sheet(false);fit()};
+$('zs').oninput=()=>setZoom(+$('zs').value);$('zp').onclick=()=>setZoom(sc*1.25);$('zm').onclick=()=>setZoom(sc/1.25);
+$('ap').onclick=()=>{const w=Math.min(150,Math.max(5,Math.round(+$('w').value||30))),l=Math.min(150,Math.max(5,Math.round(+$('l').value||60)));
+  setDims(w,l,true);hist=[g.slice()];redo=[];save();sheet(false);view(Math.max(10,sc))};
+let ct=null;$('clr').onclick=()=>{if(ct){clearTimeout(ct);ct=null;$('clr').textContent='Clear all';g.fill(0);commit();save();stats();draw();sheet(false)}else{$('clr').textContent='Tap again to clear';ct=setTimeout(()=>{ct=null;$('clr').textContent='Clear all'},3000)}};
+
+/* save as image / pdf */
+function buildExport(){
+  const n=new Array(T.length+1).fill(0);for(let i=0;i<g.length;i++)n[g[i]]++;
+  const S=Math.max(6,Math.min(16,Math.floor(3400/Math.max(cols,rows)))),pad=34,pw=cols*S,ph=rows*S,items=T.map((t,i)=>({t,n:n[i+1]})).filter(v=>v.n>0);
+  const wd=Math.max(pw+2*pad,380),top=62,h=top+ph+pad+Math.ceil(items.length/2)*26+24;
+  const c=document.createElement('canvas');c.width=wd;c.height=h;const x=c.getContext('2d');
+  x.fillStyle='#fff';x.fillRect(0,0,wd,h);const X=Math.round((wd-pw)/2),Y=top;
+  x.fillStyle='#111';x.font='bold 18px sans-serif';x.textAlign='left';x.fillText(`Floor plan  ${W} x ${L} ft  (${W*L} sq ft)`,22,28);
+  x.font='13px sans-serif';x.fillStyle='#555';x.fillText('1 square = 6 inch',22,48);
+  for(let r=0;r<rows;r++)for(let q=0;q<cols;q++){const v=g[r*cols+q];if(v){x.fillStyle=T[v-1].c;x.fillRect(X+q*S,Y+r*S,S,S)}}
+  const gl=(st2,col,lw)=>{x.strokeStyle=col;x.lineWidth=lw;x.beginPath();for(let q=0;q<=cols;q+=st2){x.moveTo(X+q*S,Y);x.lineTo(X+q*S,Y+ph)}for(let r=0;r<=rows;r+=st2){x.moveTo(X,Y+r*S);x.lineTo(X+pw,Y+r*S)}x.stroke()};
+  gl(1,'rgba(120,130,125,0.25)',0.5);gl(10,'#8a948d',1);x.strokeStyle='#333';x.lineWidth=2;x.strokeRect(X,Y,pw,ph);
+  x.fillStyle='#444';x.font='11px sans-serif';x.textAlign='center';for(let q=10;q<=cols;q+=10)x.fillText(q/2,X+q*S,Y-6);
+  x.textAlign='right';for(let r=10;r<=rows;r+=10)x.fillText(r/2,X-5,Y+r*S+4);
+  x.textAlign='left';x.font='14px sans-serif';
+  items.forEach((it,i)=>{const lx=22+(i%2)*(wd/2),ly=Y+ph+pad+Math.floor(i/2)*26;x.fillStyle=it.t.c;x.fillRect(lx,ly-12,14,14);x.fillStyle='#111';x.fillText(`${it.t.n}: ${+(it.n/4).toFixed(2)} sq ft`,lx+22,ly)});
+  return c}
+function b64(u8){let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)}
+function dataU8(du){const bin=atob(du.split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
+function makePdf(img,w,h){
+  let pw=595,ph=842;if(w>h){pw=842;ph=595}const m=24,k=Math.min((pw-2*m)/w,(ph-2*m)/h),iw=(w*k).toFixed(2),ih=(h*k).toFixed(2),x=((pw-w*k)/2).toFixed(2),y=((ph-h*k)/2).toFixed(2);
+  const enc=new TextEncoder(),ch2=[],off=[];let len=0;const add=d=>{const u=typeof d==='string'?enc.encode(d):d;ch2.push(u);len+=u.length};
+  const obj=(n,body)=>{off[n]=len;add(n+' 0 obj\n'+body+'\nendobj\n')};
+  add('%PDF-1.4\n');obj(1,'<< /Type /Catalog /Pages 2 0 R >>');obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>`);
+  const cs=`q ${iw} 0 0 ${ih} ${x} ${y} cm /Im0 Do Q`;obj(4,`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`);
+  off[5]=len;add(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.length} >>\nstream\n`);add(img);add('\nendstream\nendobj\n');
+  const xr=len;let t='xref\n0 6\n0000000000 65535 f \n';for(let i=1;i<=5;i++)t+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+  add(t+`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`);
+  const out=new Uint8Array(len);let p=0;for(const c of ch2){out.set(c,p);p+=c.length}return out}
+async function deliver(name,mime,u8,du){
+  const C=window.Capacitor&&Capacitor.Plugins;
+  if(C&&C.Filesystem&&C.Share){try{const r=await C.Filesystem.writeFile({path:name,data:b64(u8),directory:'CACHE'});await C.Share.share({title:name,url:r.uri,dialogTitle:'Save or share your plan'});return}catch(e){}}
+  const blob=new Blob([u8],{type:mime}),url=URL.createObjectURL(blob);
+  try{const f=new File([blob],name,{type:mime});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
+  $('oa').href=url;$('oa').download=name;$('oa').textContent='Download '+name;
+  const im=$('oi');if(du){im.src=du;im.style.display='block'}else im.style.display='none';
+  $('ot').textContent=name;document.body.classList.add('ovo')}
+function exportAs(kind){sheet(false);const c=buildExport();
+  if(kind==='png'){const du=c.toDataURL('image/png');return deliver('floorplan.png','image/png',dataU8(du),du)}
+  const du=c.toDataURL('image/jpeg',0.92);return deliver('floorplan.pdf','application/pdf',makePdf(dataU8(du),c.width,c.height),null)}
+$('sp').onclick=()=>exportAs('png');$('sf').onclick=()=>exportAs('pdf');$('oc').onclick=()=>document.body.classList.remove('ovo');
+window.addEventListener('resize',size);
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{colors();draw()})}catch(e){}
+setDims(30,60,false);load();hist=[g.slice()];ui();size();view(16);
+</script>
+</body>
+</html>
