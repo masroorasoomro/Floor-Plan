@@ -31,6 +31,8 @@ body.open #bk,body.open #sheet{display:block}
 .chip i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .chip small{color:var(--mut);font-size:11px}
 #st{font-size:12px;color:var(--mut);margin-top:12px}
+#tabs{display:flex;gap:4px;overflow-x:auto;padding:5px 6px;border-top:1px solid var(--bd);flex:0 0 auto}
+.tab{padding:6px 14px;font-size:13px;border-radius:8px;flex:0 0 auto;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 canvas{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:9;align-items:center;justify-content:center;padding:14px}
 body.ovo #ov{display:flex}
@@ -46,6 +48,7 @@ body.ovo #ov{display:flex}
   <button id="un">Undo</button><button id="rd">Redo</button>
 </div>
 <div id="wrap"><canvas id="cv"></canvas></div>
+<div id="tabs"></div>
 <div id="bk"></div>
 <div id="sheet">
   <div class="sh"><span>Settings</span><button id="cl">Done</button></div>
@@ -58,6 +61,9 @@ body.ovo #ov{display:flex}
   <div class="rw"><span>W</span><input id="w" type="number" inputmode="numeric" value="30"><span>L</span><input id="l" type="number" inputmode="numeric" value="60"><button id="ap">Apply</button></div>
   <div class="sl">ZOOM (grid size)</div>
   <div class="rw"><button id="zm" style="flex:0">&minus;</button><input id="zs" type="range" min="2" max="80" value="16" style="flex:1;width:auto;padding:0"><button id="zp" style="flex:0">+</button><button id="ft">Fit all</button></div>
+  <div class="sl">THIS SHEET (floor)</div>
+  <div class="rw"><input id="nm" type="text" maxlength="24" style="flex:1;width:auto"><button id="rn">Rename</button></div>
+  <div class="rw" style="margin-top:6px"><button id="dp">Duplicate</button><button id="dl">Delete sheet</button></div>
   <div class="sl">SAVE PLAN</div>
   <div class="rw"><button id="sp">Save as image</button><button id="sf">Save as PDF</button></div>
   <div class="sl">PLAN</div>
@@ -115,7 +121,25 @@ function rect(a,b,mode,v){const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Mat
 function stats(){const n=new Array(T.length+1).fill(0);for(let i=0;i<g.length;i++)n[g[i]]++;
   let tot=0;T.forEach((t,i)=>{tot+=n[i+1];$('pal').children[i].querySelector('small').textContent=(+(n[i+1]/4).toFixed(2))+' sq ft'});
   $('st').textContent=`Plot ${W}\u00d7${L} ft = ${W*L} sq ft \u00b7 Painted ${+(tot/4).toFixed(2)} sq ft \u00b7 1 cell = 6 in`}
-function save(){try{localStorage.setItem('fp_v1',JSON.stringify({W,L,d:Array.from(g).join('')}))}catch(e){}}
+let sheets=[],si=0;
+function stash(){const s=sheets[si];if(!s)return;s.W=W;s.L=L;s.g=g;s.hist=hist;s.redo=redo;s.sc=sc;s.ox=ox;s.oy=oy}
+function save(){stash();try{localStorage.setItem('fp_v2',JSON.stringify({i:si,s:sheets.map(s=>({n:s.n,W:s.W,L:s.L,d:Array.from(s.g).join('')}))}))}catch(e){}}
+function loadAll(){let ok=false;
+  try{const j=JSON.parse(localStorage.getItem('fp_v2'));if(j&&j.s&&j.s.length){sheets=j.s.map(x=>{const gg=new Uint8Array(Math.round(x.W*2)*Math.round(x.L*2));for(let i=0;i<gg.length&&i<x.d.length;i++)gg[i]=+x.d[i];return{n:x.n,W:x.W,L:x.L,g:gg,hist:[gg.slice()],redo:[]}});si=Math.min(j.i||0,sheets.length-1);ok=true}}catch(e){}
+  if(!ok){setDims(30,60,false);load();sheets=[{n:'Sheet 1',W,L,g,hist:[g.slice()],redo:[]}];si=0}
+  const s=sheets[si];W=s.W;L=s.L;cols=Math.round(W*2);rows=Math.round(L*2);g=s.g;hist=s.hist;redo=s.redo;$('w').value=W;$('l').value=L;$('nm').value=s.n}
+function use(i){si=i;const s=sheets[i];W=s.W;L=s.L;cols=Math.round(W*2);rows=Math.round(L*2);g=s.g;hist=s.hist;redo=s.redo;$('w').value=W;$('l').value=L;$('nm').value=s.n;
+  if(s.sc&&cw){sc=s.sc;ox=s.ox;oy=s.oy;clampView();draw();stats()}else if(cw)view(16);tabs()}
+function switchTo(i){if(i===si)return;stash();use(i);save()}
+function newSheetObj(n,w,l){const gg=new Uint8Array(Math.round(w*2)*Math.round(l*2));return{n,W:w,L:l,g:gg,hist:[gg.slice()],redo:[]}}
+function uname(base){let n=base,k=2;while(sheets.some(s=>s.n===n))n=base+' '+(k++);return n}
+function addSheet(copy){if(sheets.length>=30)return;stash();const c=sheets[si];let s;
+  if(copy){s=newSheetObj(uname(c.n+' copy'),c.W,c.L);s.g.set(c.g);s.hist=[s.g.slice()]}else s=newSheetObj(uname('Sheet '+(sheets.length+1)),30,60);
+  sheets.push(s);use(sheets.length-1);save()}
+function tabs(){const t=$('tabs');t.innerHTML='';
+  sheets.forEach((s,i)=>{const b=document.createElement('button');b.className='tab'+(i===si?' on':'');b.textContent=s.n;b.onclick=()=>switchTo(i);t.appendChild(b)});
+  const p=document.createElement('button');p.className='tab';p.textContent='+';p.onclick=()=>addSheet(false);t.appendChild(p);
+  const a=t.querySelector('.on');if(a&&a.scrollIntoView)a.scrollIntoView({inline:'nearest',block:'nearest'})}
 function load(){try{const s=JSON.parse(localStorage.getItem('fp_v1'));if(s&&s.W&&s.L&&s.d){setDims(s.W,s.L,false);for(let i=0;i<g.length&&i<s.d.length;i++)g[i]=+s.d[i]}}catch(e){}}
 const same=(a,b)=>{if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true};
 function commit(){if(!same(hist[hist.length-1],g)){hist.push(g.slice());if(hist.length>60)hist.shift();redo=[]}}
@@ -196,7 +220,7 @@ function buildExport(){
   const wd=Math.max(pw+2*pad,380),top=62,h=top+ph+pad+Math.ceil(items.length/2)*26+24;
   const c=document.createElement('canvas');c.width=wd;c.height=h;const x=c.getContext('2d');
   x.fillStyle='#fff';x.fillRect(0,0,wd,h);const X=Math.round((wd-pw)/2),Y=top;
-  x.fillStyle='#111';x.font='bold 18px sans-serif';x.textAlign='left';x.fillText(`Floor plan  ${W} x ${L} ft  (${W*L} sq ft)`,22,28);
+  x.fillStyle='#111';x.font='bold 18px sans-serif';x.textAlign='left';x.fillText(`${sheets[si].n}  ${W} x ${L} ft  (${W*L} sq ft)`,22,28);
   x.font='13px sans-serif';x.fillStyle='#555';x.fillText('1 square = 6 inch',22,48);
   for(let r=0;r<rows;r++)for(let q=0;q<cols;q++){const v=g[r*cols+q];if(v){x.fillStyle=T[v-1].c;x.fillRect(X+q*S,Y+r*S,S,S)}}
   const gl=(st2,col,lw)=>{x.strokeStyle=col;x.lineWidth=lw;x.beginPath();for(let q=0;q<=cols;q+=st2){x.moveTo(X+q*S,Y);x.lineTo(X+q*S,Y+ph)}for(let r=0;r<=rows;r+=st2){x.moveTo(X,Y+r*S);x.lineTo(X+pw,Y+r*S)}x.stroke()};
@@ -222,18 +246,26 @@ function makePdf(img,w,h){
 async function deliver(name,mime,u8,du){
   const C=window.Capacitor&&Capacitor.Plugins;
   if(C&&C.Filesystem&&C.Share){try{const r=await C.Filesystem.writeFile({path:name,data:b64(u8),directory:'CACHE'});await C.Share.share({title:name,url:r.uri,dialogTitle:'Save or share your plan'});return}catch(e){}}
+  try{if(window.claude&&claude.use){const d=await claude.use('downloads');if(d){await d.save({filename:name,data:new Blob([u8],{type:mime})});return}}}catch(e){if(e&&e.code==='declined')return}
   const blob=new Blob([u8],{type:mime}),url=URL.createObjectURL(blob);
   try{const f=new File([blob],name,{type:mime});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
   $('oa').href=url;$('oa').download=name;$('oa').textContent='Download '+name;
   const im=$('oi');if(du){im.src=du;im.style.display='block'}else im.style.display='none';
   $('ot').textContent=name;document.body.classList.add('ovo')}
+function fn(){return (sheets[si].n.replace(/[^\w\- ]+/g,'').trim()||'floorplan')}
 function exportAs(kind){sheet(false);const c=buildExport();
-  if(kind==='png'){const du=c.toDataURL('image/png');return deliver('floorplan.png','image/png',dataU8(du),du)}
-  const du=c.toDataURL('image/jpeg',0.92);return deliver('floorplan.pdf','application/pdf',makePdf(dataU8(du),c.width,c.height),null)}
-$('sp').onclick=()=>exportAs('png');$('sf').onclick=()=>exportAs('pdf');$('oc').onclick=()=>document.body.classList.remove('ovo');
+  if(kind==='png'){const du=c.toDataURL('image/png');return deliver(fn()+'.png','image/png',dataU8(du),du)}
+  const du=c.toDataURL('image/jpeg',0.92);return deliver(fn()+'.pdf','application/pdf',makePdf(dataU8(du),c.width,c.height),null)}
+$('sp').onclick=()=>exportAs('png');$('sf').onclick=()=>exportAs('pdf');
+$('rn').onclick=()=>{const v=$('nm').value.trim().slice(0,24);if(!v)return;sheets[si].n=v;save();tabs()};
+$('dp').onclick=()=>{addSheet(true);sheet(false)};
+(function(){let t=null;const b=$('dl');b.onclick=()=>{if(t){clearTimeout(t);t=null;b.textContent='Delete sheet';
+  if(sheets.length<2){b.textContent='Need at least 1 sheet';setTimeout(()=>{b.textContent='Delete sheet'},2000);return}
+  sheets.splice(si,1);si=Math.min(si,sheets.length-1);use(si);save();sheet(false)}
+  else{b.textContent='Tap again to delete';t=setTimeout(()=>{t=null;b.textContent='Delete sheet'},3000)}}})();$('oc').onclick=()=>document.body.classList.remove('ovo');
 window.addEventListener('resize',size);
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{colors();draw()})}catch(e){}
-setDims(30,60,false);load();hist=[g.slice()];ui();size();view(16);
+loadAll();ui();tabs();size();view(16);
 </script>
 </body>
 </html>
