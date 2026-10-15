@@ -29,7 +29,7 @@ jobs:
           import os, sys
           from PIL import Image, ImageDraw
           res = sys.argv[1]
-          BG = (15, 118, 110, 255)
+          BG = (15, 118, 110, 255)      # teal
           FG = (255, 255, 255, 255)
 
           def glyph(d, x0, y0, x1, y1, w):
@@ -77,9 +77,14 @@ jobs:
           print('icons written to', res)
           PYEOF
           python3 make_icon.py android/app/src/main/res
+      - name: Use fixed signing key (so new APK installs over the old one)
+        run: |
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
       - name: Build APK
         run: |
           npx cap sync android
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
           cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
