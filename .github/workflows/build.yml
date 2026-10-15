@@ -12,12 +12,73 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - run: |
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow
+      - name: Create Android project
+        run: |
           npm init -y
           npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/filesystem @capacitor/share
           mkdir www && cp index.html www/
           npx cap init "Floor Plan" com.example.floorplan --web-dir www
           npx cap add android
+      - name: App icon
+        run: |
+          cat > make_icon.py <<'PYEOF'
+          import os, sys
+          from PIL import Image, ImageDraw
+          res = sys.argv[1]
+          BG = (15, 118, 110, 255)
+          FG = (255, 255, 255, 255)
+
+          def glyph(d, x0, y0, x1, y1, w):
+              d.rectangle([x0, y0, x1, y1], outline=FG, width=w)
+              W, H = x1 - x0, y1 - y0
+              vx = x0 + int(W * 0.42)
+              d.line([vx, y0, vx, y0 + int(H * 0.36)], fill=FG, width=w)
+              d.line([vx, y0 + int(H * 0.56), vx, y1], fill=FG, width=w)
+              hy = y0 + int(H * 0.52)
+              d.line([vx, hy, x1, hy], fill=FG, width=w)
+              for i in range(4):
+                  yy = y1 - int(H * 0.09) * (i + 1)
+                  d.line([x0 + w, yy, x0 + int(W * 0.30), yy], fill=FG, width=max(1, w // 2))
+
+          def foreground(size):
+              S = 1080
+              im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+              d = ImageDraw.Draw(im)
+              m = int(S * 0.30)
+              glyph(d, m, m, S - m, S - m, int(S * 0.045))
+              return im.resize((size, size), Image.LANCZOS)
+
+          def legacy(size, round_=False):
+              S = 1080
+              im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+              d = ImageDraw.Draw(im)
+              if round_:
+                  d.ellipse([0, 0, S - 1, S - 1], fill=BG)
+              else:
+                  d.rounded_rectangle([0, 0, S - 1, S - 1], radius=int(S * 0.2), fill=BG)
+              m = int(S * 0.25)
+              glyph(d, m, m, S - m, S - m, int(S * 0.05))
+              return im.resize((size, size), Image.LANCZOS)
+
+          dens = {'mdpi': (48, 108), 'hdpi': (72, 162), 'xhdpi': (96, 216), 'xxhdpi': (144, 324), 'xxxhdpi': (192, 432)}
+          for k, (lg, fg) in dens.items():
+              d = os.path.join(res, 'mipmap-' + k)
+              os.makedirs(d, exist_ok=True)
+              legacy(lg).save(os.path.join(d, 'ic_launcher.png'))
+              legacy(lg, True).save(os.path.join(d, 'ic_launcher_round.png'))
+              foreground(fg).save(os.path.join(d, 'ic_launcher_foreground.png'))
+          os.makedirs(os.path.join(res, 'values'), exist_ok=True)
+          open(os.path.join(res, 'values', 'ic_launcher_background.xml'), 'w').write(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#0F766E</color>\n</resources>\n')
+          print('icons written to', res)
+          PYEOF
+          python3 make_icon.py android/app/src/main/res
+      - name: Build APK
+        run: |
           npx cap sync android
           cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
