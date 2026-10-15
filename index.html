@@ -103,7 +103,7 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'}];
+const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Hall',c:'#dbeafe'},{n:'Corridor',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'}];
 const TN={pen:'Pen',fill:'Fill',erase:'Erase',select:'Select'};
 const I={
  set:'<svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -190,7 +190,7 @@ function findRooms(){const vis=new Uint8Array(cols*rows),out=[],bar=v=>v===1||v=
   for(let i=0;i<g.length;i++){if(vis[i]||bar(g[i]))continue;
     let n=0,ex=0,c0=1e9,c1=-1,r0=1e9,r1=-1,open=false;const tc=new Array(T.length+1).fill(0);stack.length=0;stack.push(i);vis[i]=1;
     while(stack.length){const k=stack.pop(),r=(k/cols)|0,c=k-r*cols,tv=g[k];
-      if(tv===7||tv===9)ex++;else{n++;tc[tv]++;if(c<c0)c0=c;if(c>c1)c1=c;if(r<r0)r0=r;if(r>r1)r1=r}
+      if(tv===7||tv===9||tv>=10)ex++;else{n++;tc[tv]++;if(c<c0)c0=c;if(c>c1)c1=c;if(r<r0)r0=r;if(r>r1)r1=r}
       if(c===0||r===0||c===cols-1||r===rows-1)open=true;
       if(c>0){const q=k-1;if(!vis[q]&&!bar(g[q])){vis[q]=1;stack.push(q)}}
       if(c<cols-1){const q=k+1;if(!vis[q]&&!bar(g[q])){vis[q]=1;stack.push(q)}}
@@ -213,7 +213,7 @@ function labelBox(c,cx,cy,rw,rh,items,fsMax,halo,col){
       return true}}
   return false}
 function findTyped(){const vis=new Uint8Array(cols*rows),out=[],stack=[];
-  for(let i=0;i<g.length;i++){const v=g[i];if(vis[i]||(v!==7&&v!==9))continue;
+  for(let i=0;i<g.length;i++){const v=g[i];if(vis[i]||(v!==7&&v!==9&&v<10))continue;
     let n=0,c0=1e9,c1=-1,r0=1e9,r1=-1;stack.length=0;stack.push(i);vis[i]=1;
     while(stack.length){const k=stack.pop(),r=(k/cols)|0,c=k-r*cols;n++;if(c<c0)c0=c;if(c>c1)c1=c;if(r<r0)r0=r;if(r>r1)r1=r;
       if(c>0){const q=k-1;if(!vis[q]&&g[q]===v){vis[q]=1;stack.push(q)}}
@@ -271,10 +271,26 @@ function addSheet(copy){if(sheets.length>=30)return;stash();const c=sheets[si];l
   if(copy){s=newSheetObj(dupName(c.n),c.W,c.L);s.g.set(c.g);s.hist=[s.g.slice()];sheets.splice(si+1,0,s);use(si+1)}
   else{s=newSheetObj(uname('Sheet '+(sheets.length+1)),30,60);sheets.push(s);use(sheets.length-1)}
   save()}
+function switchTo(i){if(i<0||i>=sheets.length||i===si)return;stash();save();use(i);save()}
 function tabs(){const t=$('tabs');t.innerHTML='';
-  sheets.forEach((s,i)=>{const b=document.createElement('button');b.className='tab'+(i===si?' on':'');b.textContent=s.n;b.onclick=()=>switchTo(i);t.appendChild(b)});
+  sheets.forEach((s,i)=>{const b=document.createElement('button');b.className='tab'+(i===si?' on':'');b.textContent=s.n;b.title='Tap to open; long-press or right-click for rename/delete';b.onclick=()=>switchTo(i);
+    let holdTimer=null,held=false;
+    b.addEventListener('pointerdown',()=>{held=false;holdTimer=setTimeout(()=>{held=true;sheetActions(i);},550)});
+    const cancelHold=()=>{clearTimeout(holdTimer);holdTimer=null};
+    b.addEventListener('pointerup',cancelHold);b.addEventListener('pointerleave',cancelHold);b.addEventListener('pointercancel',cancelHold);
+    b.addEventListener('contextmenu',e=>{e.preventDefault();sheetActions(i)});
+    t.appendChild(b)});
   const p=document.createElement('button');p.className='tab';p.textContent='+';p.onclick=()=>addSheet(false);t.appendChild(p);
   const a=t.querySelector('.on');if(a&&a.scrollIntoView)a.scrollIntoView({inline:'nearest',block:'nearest'})}
+function sheetActions(i){
+  const p=$('ppb');p.innerHTML='';
+  const h=document.createElement('div');h.className='sh';h.textContent=sheets[i].n+' — Sheet options';p.appendChild(h);
+  const r=document.createElement('div');r.className='rw';r.style.marginTop='10px';
+  const ren=document.createElement('button');ren.textContent='Rename';ren.onclick=()=>{closePopup();const v=prompt('New sheet name',sheets[i].n);if(v&&v.trim()){sheets[i].n=v.trim().slice(0,24);if(i===si)$('nm').value=sheets[i].n;save();tabs()}};
+  const del=document.createElement('button');del.textContent='Delete';del.disabled=sheets.length<2;del.onclick=()=>{if(sheets.length<2)return;if(!confirm('Delete sheet “'+sheets[i].n+'”?'))return;stash();sheets.splice(i,1);if(si>i)si--;else if(si===i)si=Math.min(i,sheets.length-1);closePopup();use(si);save()};
+  const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.onclick=closePopup;
+  r.append(ren,del,cancel);p.appendChild(r);document.body.classList.add('ppo')
+}
 function load(){try{const s=JSON.parse(localStorage.getItem('fp_v1'));if(s&&s.W&&s.L&&s.d){setDims(s.W,s.L,false);for(let i=0;i<g.length&&i<s.d.length;i++)g[i]=+s.d[i]}}catch(e){}}
 const same=(a,b)=>{if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true};
 function commit(){if(!same(hist[hist.length-1],g)){hist.push(g.slice());if(hist.length>60)hist.shift();redo=[]}}
