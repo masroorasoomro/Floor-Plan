@@ -103,7 +103,7 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Hall',c:'#dbeafe'},{n:'Corridor',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'}];
+const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Hall',c:'#dbeafe'},{n:'Corridor',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan (open sky)',c:'#a7e8a0'}];
 const TN={pen:'Pen',fill:'Fill',erase:'Erase',select:'Select'};
 const I={
  set:'<svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -420,6 +420,7 @@ function drawSheet(sh,bw,bh){
   x.textBaseline='alphabetic';x.textAlign='left';x.fillStyle='#111';x.font='bold '+Math.round(u*1.15)+'px sans-serif';
   x.fillText(sh.n+'   '+W+' x '+L+' ft  ('+(W*L)+' sq ft)',Math.round(u*0.5),Math.round(u*1.4));
   x.font=Math.round(u*0.78)+'px sans-serif';x.fillStyle='#555';x.fillText(fileName+'  \u00b7  1 square = 6 inch',Math.round(u*0.5),Math.round(u*2.4));
+  {const ax=bw-Math.round(u*1.4),ay=Math.round(u*2.1);x.fillStyle='#111';x.beginPath();x.moveTo(ax,ay-u*1.1);x.lineTo(ax-u*0.5,ay+u*0.4);x.lineTo(ax,ay+u*0.1);x.lineTo(ax+u*0.5,ay+u*0.4);x.closePath();x.fill();x.textAlign='center';x.font='bold '+Math.round(u*0.8)+'px sans-serif';x.fillText('N',ax,ay+u*1.2);x.textAlign='left'}
   for(let r=0;r<rows;r++)for(let q=0;q<cols;q++){const v=g[r*cols+q];if(v){x.fillStyle=T[v-1].c;x.fillRect(X+q*S,Y+r*S,S,S)}}
   const gl=(k,col,lw)=>{x.strokeStyle=col;x.lineWidth=lw;x.beginPath();for(let q=0;q<=cols;q+=k){x.moveTo(X+q*S,Y);x.lineTo(X+q*S,Y+ph)}for(let r=0;r<=rows;r+=k){x.moveTo(X,Y+r*S);x.lineTo(X+pw,Y+r*S)}x.stroke()};
   gl(1,'rgba(120,130,125,0.22)',1);gl(10,'#8a948d',1.5);x.strokeStyle='#333';x.lineWidth=3;x.strokeRect(X,Y,pw,ph);
