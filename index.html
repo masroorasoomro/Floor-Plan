@@ -43,6 +43,7 @@ button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #rd:disabled{opacity:.45}
 #pz{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--mut);margin-bottom:6px}
 #pz input{width:64px;padding:8px 4px;text-align:center;font-size:15px}
+#dim{position:absolute;left:0;top:0;display:none;pointer-events:none;z-index:3;background:rgba(17,24,39,.92);color:#fff;font:700 13px system-ui,sans-serif;padding:4px 10px;border-radius:9px;white-space:nowrap}
 #toast{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(20,28,24,.92);color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;z-index:20;display:none;max-width:90%;text-align:center}
 #pp{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:8;align-items:center;justify-content:center;padding:14px}
 body.ppo #pp{display:flex}
@@ -73,7 +74,7 @@ body.ovo #ov{display:flex}
   <button id="bDp" title="Duplicate sheet (hold)"></button>
     <span id="fl" hidden></span><span id="tl" hidden></span>
 </div>
-<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="wrap"><canvas id="cv"></canvas><div id="dim"></div></div>
 <div id="tabs"></div>
 <div id="bk"></div>
 <div id="sheet">
@@ -99,6 +100,7 @@ body.ovo #ov{display:flex}
     <div class="sl">PLAN</div>
   <div class="rw"><button id="clr">Clear all</button></div>
   <div id="st"></div>
+  <div class="sl" id="ver"></div>
 </div>
 
 <div id="toast"></div>
@@ -106,6 +108,7 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
+const BUILD='2026-10-17 d',BUILD_RUN='__BUILD__';
 const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan (open sky)',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
 const isOpenT=v=>v===7||v===9||(v>=10&&v<=13);   /* Stairs, Extra, Lounge, Passage, Porch, Sehan: labelled separately, not counted in a room's area */
 const isBarT=v=>v===1||v===3||v===4||v===15;      /* Wall, Door, Window, Ventilator: close a room */
@@ -159,11 +162,10 @@ function render(){
   if(st&&st.conn&&st.t==='pen'){ctx.globalAlpha=0.65;ctx.fillStyle=T[cur-1].c;for(const q of lineCells(st.a,st.b))ctx.fillRect(ox+q.c*sc,oy+q.r*sc,sc+0.5,sc+0.5);ctx.globalAlpha=1}
   if(anchor){ctx.strokeStyle=CL.ac;ctx.lineWidth=3;ctx.strokeRect(ox+anchor.c*sc+1,oy+anchor.r*sc+1,sc-2,sc-2);
     if(sc>=14){ctx.fillStyle=CL.ac;ctx.font='bold 12px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('A',ox+anchor.c*sc+sc/2,oy+anchor.r*sc+sc/2)}}
-  if(st&&st.a&&st.b&&(st.t==='fill'||st.t==='select'||st.t==='erase'||st.t==='pen')&&(st.a.c!==st.b.c||st.a.r!==st.b.r))dimPill(Math.min(st.a.c,st.b.c),Math.max(st.a.c,st.b.c),Math.min(st.a.r,st.b.r),Math.max(st.a.r,st.b.r));
   if(((st&&st.t==='paste')||pv)&&gp&&clip){ctx.globalAlpha=0.75;
     for(let y=0;y<clip.h;y++)for(let x=0;x<clip.w;x++){const v=clip.d[y*clip.w+x];if(v){ctx.fillStyle=T[v-1].c;ctx.fillRect(ox+(gp.c+x)*sc,oy+(gp.r+y)*sc,sc+0.5,sc+0.5)}}
     ctx.globalAlpha=1;ctx.strokeStyle=CL.ac;ctx.lineWidth=2;ctx.strokeRect(ox+gp.c*sc,oy+gp.r*sc,clip.w*sc,clip.h*sc)}
-  ctx.restore();headers();
+  ctx.restore();headers();updateDim();
 }
 function colName(c){let n=c+1,t='';while(n>0){const m=(n-1)%26;t=String.fromCharCode(65+m)+t;n=Math.floor((n-1)/26)}return t}
 const colLabel=c=>(c+1)+colName(c);
@@ -205,13 +207,15 @@ function findRooms(){const vis=new Uint8Array(cols*rows),out=[],bar=isBarT,stack
     if(!open&&n>=16&&(c1-c0+1)>=4&&(r1-r0+1)>=4){let bt=0,bn=0;for(let t=1;t<=T.length;t++)if(tc[t]>bn){bn=tc[t];bt=t}
       out.push({c0,c1,r0,r1,n,ex,name:(bt&&bn>=n*0.4)?T[bt-1].n:''})}}
   return out}
-function dimPill(c0,c1,r0,r1){const w=(c1-c0+1)*6,h=(r1-r0+1)*6,t=fmtIn(h)+' \u00d7 '+fmtIn(w);
-  ctx.save();ctx.font='bold 13px system-ui,sans-serif';const tw=ctx.measureText(t).width+16,th=24;
-  const x0=ox+c0*sc,x1=ox+(c1+1)*sc,y0=oy+r0*sc,y1=oy+(r1+1)*sc;
-  let px=(x0+x1)/2-tw/2,py=y0-th-8;if(py<HY+2)py=y1+8;if(py+th>ch-RY-2)py=Math.max(HY+2,Math.min(y0+6,ch-RY-th-2));
-  px=Math.max(HX+4,Math.min(cw-RX-tw-4,px));
-  ctx.fillStyle='rgba(17,24,39,0.92)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px,py,tw,th,8);else ctx.rect(px,py,tw,th);ctx.fill();
-  ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,px+tw/2,py+th/2+0.5);ctx.restore()}
+function updateDim(){const d=$('dim');
+  if(st&&st.a&&st.b&&(st.t==='fill'||st.t==='select'||st.t==='erase'||st.t==='pen')&&(st.a.c!==st.b.c||st.a.r!==st.b.r)){
+    const c0=Math.min(st.a.c,st.b.c),c1=Math.max(st.a.c,st.b.c),r0=Math.min(st.a.r,st.b.r),r1=Math.max(st.a.r,st.b.r);
+    const t=fmtIn((r1-r0+1)*6)+' \u00d7 '+fmtIn((c1-c0+1)*6);   /* length (up-down) x width (left-right) */
+    if(d.textContent!==t)d.textContent=t;d.style.display='block';
+    const tw=d.offsetWidth||90,th=d.offsetHeight||26,x0=ox+c0*sc,x1=ox+(c1+1)*sc,y0=oy+r0*sc,y1=oy+(r1+1)*sc;
+    let px=(x0+x1)/2-tw/2,py=y0-th-8;if(py<HY+2)py=y1+8;if(py+th>ch-RY-2)py=Math.max(HY+2,Math.min(y0+6,ch-RY-th-2));
+    px=Math.max(HX+4,Math.min(cw-RX-tw-4,px));d.style.left=Math.round(px)+'px';d.style.top=Math.round(py)+'px'}
+  else if(d.style.display!=='none')d.style.display='none'}
 function fmtIn(n){const f=Math.floor(n/12),i=n%12;return f?f+"'"+(i?i+'"':''):i+'"'}
 function roomText(r){const w=(r.c1-r.c0+1)*6,h=(r.r1-r.r0+1)*6;return{d:fmtIn(Math.max(w,h))+' \u00d7 '+fmtIn(Math.min(w,h)),s:(+(r.n/4).toFixed(2))+' sq ft'}}
 function roomItems(r){const t=roomText(r);return(r.name?[{t:r.name,b:true}]:[]).concat([{t:t.d,b:true},{t:t.s,b:false}])}
@@ -592,6 +596,7 @@ $('rn').onclick=()=>{const v=$('nm').value.trim().slice(0,24);if(!v)return;sheet
   else{b.textContent='Tap again to delete';t=setTimeout(()=>{t=null;b.textContent='Delete sheet'},3000)}}})();$('oc').onclick=()=>document.body.classList.remove('ovo');
 window.addEventListener('resize',size);
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{colors();draw()})}catch(e){}
+$('ver').textContent='App version: '+BUILD+' \u00b7 build '+(BUILD_RUN.indexOf('__')===0?'(browser preview)':BUILD_RUN);
 loadAll();[['mn','set'],['un','undo'],['rd','redo'],['bEr','erase'],['bSel','select'],['bDp','dup'],['bSv','save']].forEach(([id,k])=>{$(id).innerHTML=I[k]});ui();tabs();size();view(16);
 </script>
 </body>
