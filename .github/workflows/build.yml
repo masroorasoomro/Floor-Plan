@@ -21,6 +21,7 @@ jobs:
           npm init -y
           npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/filesystem @capacitor/share
           mkdir www && cp index.html www/
+          sed -i "s/__BUILD__/${{ github.run_number }} (${GITHUB_SHA::7})/" www/index.html
           npx cap init "Floor Plan" com.example.floorplan --web-dir www
           npx cap add android
       - name: App icon
@@ -85,6 +86,7 @@ jobs:
         run: |
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
           cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
