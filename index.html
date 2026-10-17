@@ -46,6 +46,9 @@ button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #toast{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(20,28,24,.92);color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;z-index:20;display:none;max-width:90%;text-align:center}
 #pp{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:8;align-items:center;justify-content:center;padding:14px}
 body.ppo #pp{display:flex}
+body.ppa #pp{display:block;background:rgba(0,0,0,.12);padding:0}
+body.ppa #ppb{position:absolute;width:min(300px,62vw);max-width:none;max-height:72vh;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+body.ppa #ppb button{white-space:normal}
 #ppb{overscroll-behavior:contain;background:var(--bg);border-radius:14px;padding:12px;width:100%;max-width:420px;max-height:80%;overflow:auto}
 #tabs{display:flex;gap:4px;overflow-x:auto;padding:5px 6px;border-top:1px solid var(--bd);flex:0 0 auto}
 .tab{padding:6px 14px;font-size:13px;border-radius:8px;flex:0 0 auto;max-width:140px;overflow:hidden;text-overflow:ellipsis}
@@ -103,7 +106,9 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Hall',c:'#dbeafe'},{n:'Corridor',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan (open sky)',c:'#a7e8a0'}];
+const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan (open sky)',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
+const isOpenT=v=>v===7||v===9||(v>=10&&v<=13);   /* Stairs, Extra, Lounge, Passage, Porch, Sehan: labelled separately, not counted in a room's area */
+const isBarT=v=>v===1||v===3||v===4||v===15;      /* Wall, Door, Window, Ventilator: close a room */
 const TN={pen:'Pen',fill:'Fill',erase:'Erase',select:'Select'};
 const I={
  set:'<svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -154,6 +159,7 @@ function render(){
   if(st&&st.conn&&st.t==='pen'){ctx.globalAlpha=0.65;ctx.fillStyle=T[cur-1].c;for(const q of lineCells(st.a,st.b))ctx.fillRect(ox+q.c*sc,oy+q.r*sc,sc+0.5,sc+0.5);ctx.globalAlpha=1}
   if(anchor){ctx.strokeStyle=CL.ac;ctx.lineWidth=3;ctx.strokeRect(ox+anchor.c*sc+1,oy+anchor.r*sc+1,sc-2,sc-2);
     if(sc>=14){ctx.fillStyle=CL.ac;ctx.font='bold 12px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('A',ox+anchor.c*sc+sc/2,oy+anchor.r*sc+sc/2)}}
+  if(st&&st.a&&st.b&&(st.t==='fill'||st.t==='select'||st.t==='erase'||st.t==='pen')&&(st.a.c!==st.b.c||st.a.r!==st.b.r))dimPill(Math.min(st.a.c,st.b.c),Math.max(st.a.c,st.b.c),Math.min(st.a.r,st.b.r),Math.max(st.a.r,st.b.r));
   if(((st&&st.t==='paste')||pv)&&gp&&clip){ctx.globalAlpha=0.75;
     for(let y=0;y<clip.h;y++)for(let x=0;x<clip.w;x++){const v=clip.d[y*clip.w+x];if(v){ctx.fillStyle=T[v-1].c;ctx.fillRect(ox+(gp.c+x)*sc,oy+(gp.r+y)*sc,sc+0.5,sc+0.5)}}
     ctx.globalAlpha=1;ctx.strokeStyle=CL.ac;ctx.lineWidth=2;ctx.strokeRect(ox+gp.c*sc,oy+gp.r*sc,clip.w*sc,clip.h*sc)}
@@ -186,11 +192,11 @@ function headers(){const h=hl();
     for(const r of (h.r1>h.r0?[h.r0,h.r1]:[h.r0])){const y=oy+r*sc+sc/2;if(y>HY+8&&y<ch-RY-8){const t=String(r+1);tag(0,y-8,HX,16,t,HX/2,y);tag(cw-RX,y-8,RX,16,t,cw-RX/2,y)}}}
 }
 function put(c,r,v){if(c>=0&&r>=0&&c<cols&&r<rows){g[r*cols+c]=v;gver++}}
-function findRooms(){const vis=new Uint8Array(cols*rows),out=[],bar=v=>v===1||v===3||v===4,stack=[];
+function findRooms(){const vis=new Uint8Array(cols*rows),out=[],bar=isBarT,stack=[];
   for(let i=0;i<g.length;i++){if(vis[i]||bar(g[i]))continue;
     let n=0,ex=0,c0=1e9,c1=-1,r0=1e9,r1=-1,open=false;const tc=new Array(T.length+1).fill(0);stack.length=0;stack.push(i);vis[i]=1;
     while(stack.length){const k=stack.pop(),r=(k/cols)|0,c=k-r*cols,tv=g[k];
-      if(tv===7||tv===9||tv>=10)ex++;else{n++;tc[tv]++;if(c<c0)c0=c;if(c>c1)c1=c;if(r<r0)r0=r;if(r>r1)r1=r}
+      if(isOpenT(tv))ex++;else{n++;tc[tv]++;if(c<c0)c0=c;if(c>c1)c1=c;if(r<r0)r0=r;if(r>r1)r1=r}
       if(c===0||r===0||c===cols-1||r===rows-1)open=true;
       if(c>0){const q=k-1;if(!vis[q]&&!bar(g[q])){vis[q]=1;stack.push(q)}}
       if(c<cols-1){const q=k+1;if(!vis[q]&&!bar(g[q])){vis[q]=1;stack.push(q)}}
@@ -199,7 +205,14 @@ function findRooms(){const vis=new Uint8Array(cols*rows),out=[],bar=v=>v===1||v=
     if(!open&&n>=16&&(c1-c0+1)>=4&&(r1-r0+1)>=4){let bt=0,bn=0;for(let t=1;t<=T.length;t++)if(tc[t]>bn){bn=tc[t];bt=t}
       out.push({c0,c1,r0,r1,n,ex,name:(bt&&bn>=n*0.4)?T[bt-1].n:''})}}
   return out}
-function fmtIn(n){const f=Math.floor(n/12),i=n%12;return f+"'"+(i?i+'"':'')}
+function dimPill(c0,c1,r0,r1){const w=(c1-c0+1)*6,h=(r1-r0+1)*6,t=fmtIn(h)+' \u00d7 '+fmtIn(w);
+  ctx.save();ctx.font='bold 13px system-ui,sans-serif';const tw=ctx.measureText(t).width+16,th=24;
+  const x0=ox+c0*sc,x1=ox+(c1+1)*sc,y0=oy+r0*sc,y1=oy+(r1+1)*sc;
+  let px=(x0+x1)/2-tw/2,py=y0-th-8;if(py<HY+2)py=y1+8;if(py+th>ch-RY-2)py=Math.max(HY+2,Math.min(y0+6,ch-RY-th-2));
+  px=Math.max(HX+4,Math.min(cw-RX-tw-4,px));
+  ctx.fillStyle='rgba(17,24,39,0.92)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px,py,tw,th,8);else ctx.rect(px,py,tw,th);ctx.fill();
+  ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,px+tw/2,py+th/2+0.5);ctx.restore()}
+function fmtIn(n){const f=Math.floor(n/12),i=n%12;return f?f+"'"+(i?i+'"':''):i+'"'}
 function roomText(r){const w=(r.c1-r.c0+1)*6,h=(r.r1-r.r0+1)*6;return{d:fmtIn(Math.max(w,h))+' \u00d7 '+fmtIn(Math.min(w,h)),s:(+(r.n/4).toFixed(2))+' sq ft'}}
 function roomItems(r){const t=roomText(r);return(r.name?[{t:r.name,b:true}]:[]).concat([{t:t.d,b:true},{t:t.s,b:false}])}
 function typedItems(r){const w=(r.c1-r.c0+1)*6,h=(r.r1-r.r0+1)*6;return[{t:T[r.v-1].n,b:true},{t:fmtIn(Math.max(w,h))+' \u00d7 '+fmtIn(Math.min(w,h)),b:true},{t:(+(r.n/4).toFixed(2))+' sq ft',b:false}]}
@@ -213,7 +226,7 @@ function labelBox(c,cx,cy,rw,rh,items,fsMax,halo,col){
       return true}}
   return false}
 function findTyped(){const vis=new Uint8Array(cols*rows),out=[],stack=[];
-  for(let i=0;i<g.length;i++){const v=g[i];if(vis[i]||(v!==7&&v!==9&&v<10))continue;
+  for(let i=0;i<g.length;i++){const v=g[i];if(vis[i]||!isOpenT(v))continue;
     let n=0,c0=1e9,c1=-1,r0=1e9,r1=-1;stack.length=0;stack.push(i);vis[i]=1;
     while(stack.length){const k=stack.pop(),r=(k/cols)|0,c=k-r*cols;n++;if(c<c0)c0=c;if(c>c1)c1=c;if(r<r0)r0=r;if(r>r1)r1=r;
       if(c>0){const q=k-1;if(!vis[q]&&g[q]===v){vis[q]=1;stack.push(q)}}
@@ -282,30 +295,28 @@ function tabs(){const t=$('tabs');t.innerHTML='';
     t.appendChild(b)});
   const p=document.createElement('button');p.className='tab';p.textContent='+';p.onclick=()=>addSheet(false);t.appendChild(p);
   const a=t.querySelector('.on');if(a&&a.scrollIntoView)a.scrollIntoView({inline:'nearest',block:'nearest'})}
-function sheetActions(i){
-  const p=$('ppb');p.innerHTML='';
-  const h=document.createElement('div');h.className='sh';h.textContent=sheets[i].n+' — Sheet options';p.appendChild(h);
-  const r=document.createElement('div');r.className='rw';r.style.marginTop='10px';
-  const ren=document.createElement('button');ren.textContent='Rename';ren.onclick=()=>{closePopup();const v=prompt('New sheet name',sheets[i].n);if(v&&v.trim()){sheets[i].n=v.trim().slice(0,24);if(i===si)$('nm').value=sheets[i].n;save();tabs()}};
-  const del=document.createElement('button');del.textContent='Delete';del.disabled=sheets.length<2;del.onclick=()=>{if(sheets.length<2)return;if(!confirm('Delete sheet “'+sheets[i].n+'”?'))return;stash();sheets.splice(i,1);if(si>i)si--;else if(si===i)si=Math.min(i,sheets.length-1);closePopup();use(si);save()};
-  const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.onclick=closePopup;
-  const mv=document.createElement('button');mv.textContent='Move';mv.disabled=sheets.length<2;mv.onclick=()=>moveUI(i);
-  r.style.flexDirection='column';r.style.flexWrap='nowrap';[ren,mv,del,cancel].forEach(b=>{b.style.padding='14px';b.style.width='100%'});
-  r.append(ren,mv,del,cancel);p.appendChild(r);document.body.classList.add('ppo')
-}
+function sheetActions(i){popup(p=>{
+  const h=document.createElement('div');h.className='sh';h.textContent=sheets[i].n+' \u2014 Sheet options';p.appendChild(h);
+  const col=document.createElement('div');col.className='rw';col.style.cssText='margin-top:10px;flex-direction:column;flex-wrap:nowrap';
+  const mk=(t,f,dis)=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='padding:13px;width:100%';if(dis){b.disabled=true;b.style.opacity=0.4}b.onclick=f;col.appendChild(b);return b};
+  const inp=document.createElement('input');inp.type='text';inp.maxLength=24;inp.value=sheets[i].n;inp.style.cssText='width:100%;padding:11px;font-size:15px';col.appendChild(inp);
+  mk('Rename',()=>{const v=inp.value.trim().slice(0,24);if(!v)return;sheets[i].n=v;if(i===si)$('nm').value=v;save();tabs();closePopup();toast('Renamed')});
+  mk('Move\u2026',()=>moveUI(i),sheets.length<2);
+  let armed=false;const del=mk('Delete',()=>{if(sheets.length<2)return;
+    if(!armed){armed=true;del.textContent='Tap again to delete';setTimeout(()=>{armed=false;del.textContent='Delete'},2500);return}
+    stash();sheets.splice(i,1);if(si>i)si--;else if(si===i)si=Math.min(i,sheets.length-1);closePopup();use(si);save();toast('Sheet deleted')},sheets.length<2);
+  mk('Cancel',closePopup);p.appendChild(col)},true)}
 function moveSheet(i,d){const j=i+d;if(j<0||j>=sheets.length)return i;stash();const t=sheets[i];sheets[i]=sheets[j];sheets[j]=t;
   if(si===i)si=j;else if(si===j)si=i;tabs();save();return j}
-function moveUI(i){
-  const p=$('ppb');p.innerHTML='';
-  const h=document.createElement('div');h.className='sh';h.textContent='Move "'+sheets[i].n+'" (position '+(i+1)+' of '+sheets.length+')';p.appendChild(h);
-  const r=document.createElement('div');r.className='rw';r.style.marginTop='10px';r.style.flexDirection='column';r.style.flexWrap='nowrap';
-  const mk=(t,ok,f)=>{const b=document.createElement('button');b.textContent=t;b.style.padding='14px';b.style.width='100%';b.disabled=!ok;b.style.opacity=ok?1:0.4;b.onclick=f;r.appendChild(b)};
+function moveUI(i){popup(p=>{
+  const h=document.createElement('div');h.className='sh';h.textContent='Move "'+sheets[i].n+'" ('+(i+1)+' of '+sheets.length+')';p.appendChild(h);
+  const r=document.createElement('div');r.className='rw';r.style.cssText='margin-top:10px;flex-direction:column;flex-wrap:nowrap';
+  const mk=(t,ok,f)=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='padding:13px;width:100%';b.disabled=!ok;b.style.opacity=ok?1:0.4;b.onclick=f;r.appendChild(b)};
   mk('Move to start',i>0,()=>{let k=i;while(k>0)k=moveSheet(k,-1);moveUI(k)});
   mk('Move left (one step)',i>0,()=>moveUI(moveSheet(i,-1)));
   mk('Move right (one step)',i<sheets.length-1,()=>moveUI(moveSheet(i,1)));
   mk('Move to end',i<sheets.length-1,()=>{let k=i;while(k<sheets.length-1)k=moveSheet(k,1);moveUI(k)});
-  mk('Done',true,closePopup);
-  p.appendChild(r);document.body.classList.add('ppo')}
+  mk('Done',true,closePopup);p.appendChild(r)},true)}
 function load(){try{const s=JSON.parse(localStorage.getItem('fp_v1'));if(s&&s.W&&s.L&&s.d){setDims(s.W,s.L,false);for(let i=0;i<g.length&&i<s.d.length;i++)g[i]=+s.d[i]}}catch(e){}}
 const same=(a,b)=>{if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true};
 function commit(){if(!same(hist[hist.length-1],g)){hist.push(g.slice());if(hist.length>60)hist.shift();redo=[]}}
@@ -331,14 +342,14 @@ function endDraw(apply){if(!st||st.t==='hand'||st.t==='pending')return;
   const pen=st.t==='pen',one=(st.a.c===st.b.c&&st.a.r===st.b.r);
   if(!apply){if(pen&&!st.conn){commit();save();stats()}return}
   if(st.conn){anchor=null;
-    if(st.t==='select'){setSel(st.a,st.b);setTimeout(()=>popup(selUI),0);return}
+    if(st.t==='select'){setSel(st.a,st.b);setTimeout(()=>popup(selUI,true),0);return}
     if(pen)lineTo(st.a,st.b,cur);else rect(st.a,st.b,'fill',st.t==='erase'?0:cur);
     commit();save();stats();return}
   if(st.t==='select'){
     if(one){const c0=st.a.c,r0=st.a.r;
-      if(clip&&c0>=0&&r0>=0&&c0<cols&&r0<rows){gp={c:c0,r:r0};pv=true;setTimeout(()=>popup(pasteUI),0)}
+      if(clip&&c0>=0&&r0>=0&&c0<cols&&r0<rows){gp={c:c0,r:r0};pv=true;setTimeout(()=>popup(pasteUI,true),0)}
       else{anchor={c:c0,r:r0};toast('Point A set: '+cellName(c0,r0)+'. Scroll, then hold at point B')}}
-    else{setSel(st.a,st.b);setTimeout(()=>popup(selUI),0)}
+    else{setSel(st.a,st.b);setTimeout(()=>popup(selUI,true),0)}
     return}
   if(st.t==='fill'||st.t==='erase')rect(st.a,st.b,'fill',st.t==='erase'?0:cur);
   if(one){anchor={c:st.a.c,r:st.a.r};toast('Point A set: '+cellName(st.a.c,st.a.r)+'. Scroll, then hold at point B (hold A again to cancel)')}
@@ -435,14 +446,14 @@ function drawSheet(sh,bw,bh){
     x.fillStyle='#111';x.fillText(it.t.n+': '+(+(it.n/4).toFixed(2))+' sq ft',lx+Math.round(u*1.1),ly)});
   return c}
 function renderSheet(sh,bw,bh){return withSheet(sh,()=>drawSheet(sh,bw,bh))}
-function buildPage(paper,layout){stash();
-  const mm=150/25.4,d=paper==='A3'?[297,420]:[210,297],cur=sheets[si],nxt=(layout==='two')?sheets[si+1]:null;
-  let pw=Math.round(d[0]*mm),ph=Math.round(d[1]*mm);const land=nxt?true:(cur.W>cur.L);if(land){const t=pw;pw=ph;ph=t}
+function buildPage(paper,idx){stash();
+  const mm=150/25.4,d=paper==='A3'?[297,420]:[210,297],A=sheets[idx[0]],B=idx.length>1?sheets[idx[1]]:null;
+  let pw=Math.round(d[0]*mm),ph=Math.round(d[1]*mm);const land=B?true:(A.W>A.L);if(land){const t=pw;pw=ph;ph=t}
   const c=document.createElement('canvas');c.width=pw;c.height=ph;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,pw,ph);
   const m=Math.round(8*mm);
-  if(nxt){const bw=Math.floor((pw-3*m)/2),bh=ph-2*m;x.drawImage(renderSheet(cur,bw,bh),m,m);x.drawImage(renderSheet(nxt,bw,bh),2*m+bw,m);
+  if(B){const bw=Math.floor((pw-3*m)/2),bh=ph-2*m;x.drawImage(renderSheet(A,bw,bh),m,m);x.drawImage(renderSheet(B,bw,bh),2*m+bw,m);
     x.strokeStyle='#cfd5cf';x.lineWidth=1;x.beginPath();x.moveTo(pw/2,m);x.lineTo(pw/2,ph-m);x.stroke()}
-  else x.drawImage(renderSheet(cur,pw-2*m,ph-2*m),m,m);
+  else x.drawImage(renderSheet(A,pw-2*m,ph-2*m),m,m);
   return c}
 function b64(u8){let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)}
 function dataU8(du){const bin=atob(du.split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
@@ -463,18 +474,27 @@ async function deliver(name,mime,u8,du){
   try{if(window.claude&&claude.use){const d=await claude.use('downloads');if(d){await d.save({filename:name,data:new Blob([u8],{type:mime})});return}}}catch(e){if(e&&e.code==='declined')return}
   const blob=new Blob([u8],{type:mime}),url=URL.createObjectURL(blob);
   try{const f=new File([blob],name,{type:mime});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
-  $('oa').href=url;$('oa').download=name;$('oa').textContent='Download '+name;
+  $('oa').style.display='';$('oa').href=url;$('oa').download=name;$('oa').textContent='Download '+name;
   const im=$('oi');if(du){im.src=du;im.style.display='block'}else im.style.display='none';
   $('ot').textContent=name;document.body.classList.add('ovo')}
 function fn(){return (sheets[si].n.replace(/[^\w\- ]+/g,'').trim()||'floorplan')}
-let paperSel='A4',layoutSel='two';
-function exportAs(kind){sheet(false);const two=layoutSel==='two'&&sheets[si+1],c=buildPage(paperSel,two?'two':'one'),nm=fn()+' '+paperSel+(two?' + '+safeName(sheets[si+1].n):'');
+let paperSel='A4',layoutSel='two',pairL=-1,pairR=-1;
+function pairFix(){const n=sheets.length;if(pairL<0||pairL>=n)pairL=si;if(pairR<0||pairR>=n||pairR===pairL)pairR=(pairL+1<n)?pairL+1:(pairL>0?pairL-1:-1)}
+function printIdx(){pairFix();return(layoutSel==='two'&&sheets.length>1&&pairR>=0)?[pairL,pairR]:[si]}
+function exportAs(kind){sheet(false);const idx=printIdx(),c=buildPage(paperSel,idx),nm=(idx.length>1?safeName(sheets[idx[0]].n)+' + '+safeName(sheets[idx[1]].n):fn())+' '+paperSel;
   if(kind==='png'){const du=c.toDataURL('image/png');return deliver(nm+'.png','image/png',dataU8(du),du)}
   const du=c.toDataURL('image/jpeg',0.92),pt=paperSel==='A3'?[842,1191]:[595,842],land=c.width>c.height;
   return deliver(nm+'.pdf','application/pdf',makePdf(dataU8(du),c.width,c.height,land?pt[1]:pt[0],land?pt[0]:pt[1]),null)}
+function previewPage(){const idx=printIdx(),c=buildPage(paperSel,idx);$('oi').src=c.toDataURL('image/jpeg',0.8);$('oi').style.display='block';$('oa').style.display='none';
+  $('ot').textContent='Preview: '+idx.map(i=>sheets[i].n).join(' + ')+' ('+paperSel+')';document.body.classList.add('ovo')}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>{t.style.display='none'},2400)}
-function popup(build){const p=$('ppb');p.innerHTML='';build(p);document.body.classList.add('ppo')}
-function closePopup(){document.body.classList.remove('ppo');if(pv){pv=false;gp=null;draw()}}
+let lastPt={x:180,y:300};
+['pointerdown','pointerup'].forEach(t=>window.addEventListener(t,e=>{if(e.target&&e.target.closest&&e.target.closest('#ppb'))return;if(e.clientX!=null)lastPt={x:e.clientX,y:e.clientY}},true));
+function placePopup(){const b=$('ppb'),W=window.innerWidth||360,H=window.innerHeight||640,w=b.offsetWidth||250,h=b.offsetHeight||200;
+  let left=lastPt.x<W/2?lastPt.x+10:lastPt.x-w-10;left=Math.max(8,Math.min(W-w-8,left));
+  let top=lastPt.y-24;if(top+h>H-8)top=H-h-8;if(top<8)top=8;b.style.left=left+'px';b.style.top=top+'px'}
+function popup(build,anch){const p=$('ppb');p.innerHTML='';build(p);document.body.classList.toggle('ppa',!!anch);document.body.classList.add('ppo');if(anch)placePopup()}
+function closePopup(){document.body.classList.remove('ppo','ppa');if(pv){pv=false;gp=null;draw()}}
 $('pp').onclick=e=>{if(e.target===$('pp'))closePopup()};
 function holdable(b,tap,hold,ms){let t=null;
   b.addEventListener('pointerdown',()=>{clearTimeout(t);t=setTimeout(()=>{t=null;try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}hold()},ms||450)});
@@ -490,13 +510,20 @@ function saveUI(p){
   const mkb=(t,on,f,dis)=>{const b=document.createElement('button');b.textContent=t;b.style.padding='12px';if(on)b.className='on';if(dis){b.disabled=true;b.style.opacity=0.4}b.onclick=f;return b};
   const sec=t=>{const d=document.createElement('div');d.className='sl';d.textContent=t;p.appendChild(d)};
   const row=()=>{const r=document.createElement('div');r.className='rw';p.appendChild(r);return r};
+  const pick=(lab,get,set)=>{const w=document.createElement('label');w.style.cssText='flex:1;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut)';w.textContent=lab;
+    const s=document.createElement('select');s.style.cssText='padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit';
+    sheets.forEach((x,i)=>{const o=document.createElement('option');o.value=i;o.textContent=x.n;s.appendChild(o)});s.value=get();s.onchange=()=>{set(+s.value);popup(saveUI)};w.appendChild(s);return w};
   const h=document.createElement('div');h.className='sh';h.innerHTML='<span>Save / print</span>';p.appendChild(h);
-  const nxt=sheets[si+1],two=layoutSel==='two'&&!!nxt;
+  pairFix();const many=sheets.length>1,two=layoutSel==='two'&&many;
   sec('PAPER SIZE');let r=row();
   r.appendChild(mkb('A4',paperSel==='A4',()=>{paperSel='A4';popup(saveUI)}));r.appendChild(mkb('A3',paperSel==='A3',()=>{paperSel='A3';popup(saveUI)}));
   sec('WHAT TO PRINT');r=row();
-  r.appendChild(mkb('This sheet: '+sheets[si].n,!two,()=>{layoutSel='one';popup(saveUI)}));
-  r.appendChild(mkb(nxt?'2 sheets, side by side (landscape): '+sheets[si].n+' + '+nxt.n:'2 sheets side by side (there is no next sheet)',two,()=>{layoutSel='two';popup(saveUI)},!nxt));
+  r.appendChild(mkb('One sheet: '+sheets[si].n,!two,()=>{layoutSel='one';popup(saveUI)}));
+  r.appendChild(mkb(many?'Two sheets on one page (landscape)':'Two sheets (this file has only one sheet)',two,()=>{layoutSel='two';popup(saveUI)},!many));
+  if(two){r=row();r.style.marginTop='6px';
+    r.appendChild(pick('Left sheet',()=>pairL,v=>{pairL=v;if(pairR===pairL)pairR=(v+1<sheets.length)?v+1:v-1}));
+    r.appendChild(pick('Right sheet',()=>pairR,v=>{pairR=v;if(pairL===pairR)pairL=(v+1<sheets.length)?v+1:v-1}))}
+  r=row();r.style.marginTop='8px';r.appendChild(mkb('Preview page',false,()=>{closePopup();previewPage()}));
   sec('SAVE AS');r=row();
   r.appendChild(mkb('Image (PNG)',false,()=>{closePopup();exportAs('png')}));r.appendChild(mkb('PDF',false,()=>{closePopup();exportAs('pdf')}));
   sec('BACKUP / RESTORE (to use in a new app or phone)');r=row();
@@ -543,10 +570,10 @@ function actSel(k){
   else if(k==='cp'){copySel();sel=null;draw();toast('Copied. Hold on the plan where it should go')}
   else if(k==='ct'){copySel();for(let r=sel.r0;r<=sel.r1;r++)for(let c=sel.c0;c<=sel.c1;c++)put(c,r,0);sel=null;commit();save();stats();draw();toast('Cut. Hold on the plan where it should go')}
   else{setTool('select');toast('Hold on the plan where it should go, then tap Paste here')}}
-holdable($('md'),()=>{setTool(tool==='pen'?'fill':tool==='fill'?'pen':lastDraw)},()=>popup(pickerUI));
+holdable($('md'),()=>{setTool(tool==='pen'?'fill':tool==='fill'?'pen':lastDraw)},()=>popup(pickerUI,true));
 holdable($('bDp'),()=>toast('Hold the Duplicate button to copy this sheet'),()=>{addSheet(true);toast('Duplicated as '+sheets[si].n)},500);
-holdable($('bSel'),()=>{setTool(tool==='select'?lastDraw:'select');if(tool==='select')toast('Hold on the plan and drag, or hold at two points')},()=>popup(selUI));
-$('bSv').onclick=()=>popup(saveUI);
+holdable($('bSel'),()=>{setTool(tool==='select'?lastDraw:'select');if(tool==='select')toast('Hold on the plan and drag, or hold at two points')},()=>popup(selUI,true));
+$('bSv').onclick=()=>{pairL=-1;pairR=-1;popup(saveUI)};
 let fitW=false;
 function fitAll(){P.clear();st=null;pz=null;flOn=false;as=false;if(pv){pv=false;gp=null}sheet(false);closePopup();
   fitW=!fitW;if(fitW){fitWidth();toast('Fit: full width (scroll up/down). Double-tap again for the whole plan')}else{fit();toast('Fit: whole plan on screen. Double-tap again for full width')}}
