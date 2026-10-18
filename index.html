@@ -32,7 +32,6 @@ body.open #bk,body.open #sheet{display:block}
 .rw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .rw>button{flex:1 1 auto}
 
-/* Increased grid gaps and inner padding for better touch targets */
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom: 8px;}
 .g4>button,.g4>input{
   width:100%;
@@ -52,7 +51,6 @@ body.open #bk,body.open #sheet{display:block}
 }
 .g4>input{padding:8px 4px;text-align:center;}
 
-/* Type palette spacing */
 #pal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
 .chip{
   display:flex;
@@ -61,14 +59,16 @@ body.open #bk,body.open #sheet{display:block}
   justify-content:center;
   font-size:12px;
   line-height:1.25;
-  padding:8px 4px;
+  padding:8px 2px;
   overflow:hidden;
   border-radius:8px;
   min-height:48px;
+  border-width:1px;
+  border-style:solid;
 }
-.chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}
-.chip i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.28)}
-.chip small{color:var(--mut);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}
+.chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;font-weight:600;}
+.chip small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}
+.chip.on{outline:3px solid var(--ac);outline-offset:-3px;border-color:transparent;}
 
 #st{font-size:12px;color:var(--mut);margin-top:12px}
 button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -136,8 +136,8 @@ body.ovo #ov{display:flex}
 
   <div class="sl">DRAWING TOOL &amp; TYPE</div>
   <div class="g4" style="margin-bottom:4px">
-    <button data-t="pen">Pen</button>
     <button data-t="fill">Fill</button>
+    <button data-t="pen">Pen</button>
     <button data-t="erase">Erase</button>
     <button data-t="select">Select</button>
   </div>
@@ -163,8 +163,8 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const BUILD='2026-10-19 e',BUILD_RUN='__BUILD__';
-const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan (open sky)',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
+const BUILD='2026-10-19 f',BUILD_RUN='__BUILD__';
+const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
 const isOpenT=v=>v===7||v===9||(v>=10&&v<=13);
 const isBarT=v=>v===1||v===3||v===4||v===15;
 const TN={pen:'Pen',fill:'Fill',erase:'Erase',select:'Select',box:'Frame'};
@@ -181,10 +181,10 @@ const I={
  save:'<svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>',
  box:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8v8H8z" opacity="0.25"/></svg>'};
 const HX=30,HY=30,RX=30,RY=30;
-let sel=null,clip=null,pasteMode=false,gp=null,lastDraw='pen',anchor=null;
+let sel=null,clip=null,pasteMode=false,gp=null,lastDraw='fill',anchor=null;
 let boxes=[];
 let rooms=[],typed=[],rG=null,rV=-1,gver=0,uU=null,uR=null,pv=false;
-let W=25,L=60,cols=0,rows=0,g=null,sc=16,ox=HX,oy=HY,tool='pen',cur=1,hist=[],redo=[],cw=0,ch=0,rc=null,raf=0,lastZ=0,flOn=false,st=null,pz=null,CL={};
+let W=25,L=60,cols=0,rows=0,g=null,sc=16,ox=HX,oy=HY,tool='fill',cur=1,hist=[],redo=[],cw=0,ch=0,rc=null,raf=0,lastZ=0,flOn=false,st=null,pz=null,CL={};
 let zoomCycle = -1;
 const cv=$('cv'),ctx=cv.getContext('2d'),wrap=$('wrap');
 function colors(){const s=getComputedStyle(document.documentElement),f=v=>s.getPropertyValue(v).trim();CL={cv:f('--cv'),g1:f('--g1'),g2:f('--g2'),g3:f('--g3'),card:f('--card'),mut:f('--mut'),ac:f('--ac'),tx:f('--tx')}}
@@ -507,7 +507,7 @@ function ui(){const t=T[cur-1];
   else icon=lastDraw==='fill'?I.fill:I.pen;
   $('md').innerHTML=icon+(tool==='box'?'':'<i class="sw" style="background:'+t.c+'"></i>');
   $('md').classList.toggle('on',tool==='pen'||tool==='fill'||tool==='box');
-  $('tl').textContent=tool==='erase'?'Erase':tool==='select'?'Select':tool==='box'?'Frame (red outline)':TN[tool]+' \u00b7 '+t.n;
+  $('tl').textContent=tool==='erase'?'Erase':tool==='select'?'Select':tool==='box'?'Frame':TN[tool]+' \u00b7 '+t.n;
   document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===tool));
   [...$('pal').children].forEach((x,j)=>{
     if(j<T.length)x.classList.toggle('on',j+1===cur&&tool!=='box');
@@ -515,13 +515,27 @@ function ui(){const t=T[cur-1];
   });
   $('bEr').classList.toggle('on',tool==='erase');$('bSel').classList.toggle('on',tool==='select')}
 function setTool(t){zoomCycle=-1;tool=t;pasteMode=false;anchor=null;if(t!=='select'){sel=null;clip=null}if(t==='pen'||t==='fill')lastDraw=t;ui()}
-T.forEach((t,i)=>{const b=document.createElement('button');b.className='chip';
-  b.innerHTML=`<span><i style="background:${t.c}"></i>${t.n}</span><small>0 sq ft</small>`;
-  b.onclick=()=>{zoomCycle=-1;cur=i+1;pasteMode=false;if(tool==='erase'||tool==='select'||tool==='box'){tool=lastDraw;sel=null;clip=null;anchor=null}ui()};$('pal').appendChild(b)});
+
+T.forEach((t,i)=>{
+  const b=document.createElement('button');b.className='chip';
+  const hex=t.c.replace('#','');
+  const r=parseInt(hex.substr(0,2),16)||0, g=parseInt(hex.substr(2,2),16)||0, b_=parseInt(hex.substr(4,2),16)||0;
+  const yiq=(r*299+g*587+b_*114)/1000;
+  const txtColor=yiq>=128?'#000':'#fff';
+  b.style.backgroundColor=t.c;
+  b.style.color=txtColor;
+  b.style.borderColor='rgba(0,0,0,.2)';
+  b.innerHTML=`<span>${t.n}</span><small style="color:${txtColor};opacity:0.8">0 sq ft</small>`;
+  b.onclick=()=>{zoomCycle=-1;cur=i+1;pasteMode=false;if(tool==='erase'||tool==='select'||tool==='box'){tool=lastDraw;sel=null;clip=null;anchor=null}ui()};$('pal').appendChild(b)
+});
 {const fb=document.createElement('button');fb.className='chip';
-  fb.innerHTML='<span><i style="background:#fff;border:2px solid #dc2626"></i>Frame (red)</span><small>outline only</small>';
+  fb.innerHTML='<span>Frame</span><small>0 sq ft</small>';
+  fb.style.backgroundColor='#fff';
+  fb.style.color='#dc2626';
+  fb.style.borderColor='#dc2626';
   fb.onclick=()=>{zoomCycle=-1;sel=null;clip=null;anchor=null;pasteMode=false;setTool('box')};
   $('pal').appendChild(fb)}
+
 document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTool(b.dataset.t));
 const sheet=o=>document.body.classList.toggle('open',o);
 $('bk').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
@@ -640,16 +654,16 @@ function holdable(b,tap,hold,ms){let t=null;
 function pickerUI(p){
   const h=document.createElement('div');h.className='sh';h.innerHTML='<span>Tool &amp; type</span>';p.appendChild(h);
   const tr=document.createElement('div');tr.className='rw';tr.style.marginTop='10px';
-  [['pen','Pen'],['fill','Fill']].forEach(([k,lbl])=>{
+  [['fill','Fill'],['pen','Pen']].forEach(([k,lbl])=>{
     const b=document.createElement('button');b.textContent=lbl;b.className=tool===k?'on':'';b.style.padding='12px';
     b.onclick=()=>{setTool(k);popup(pickerUI,true)};tr.appendChild(b)});
   p.appendChild(tr);
-  const activeTl=(tool==='fill')?'fill':'pen';
+  const activeTl=(tool==='pen')?'pen':'fill';
   const sl=document.createElement('div');sl.className='sl';sl.textContent=TN[activeTl]+' \u2014 pick type';p.appendChild(sl);
   const w=document.createElement('div');w.className='rw';
   T.forEach((t,i)=>{const b=document.createElement('button');b.className=(tool===activeTl&&cur===i+1)?'on':'';b.innerHTML=`<i class="dot" style="background:${t.c}"></i> ${t.n}`;
     b.onclick=()=>{cur=i+1;setTool(activeTl);closePopup()};w.appendChild(b)});
-  const fb=document.createElement('button');fb.className=(tool==='box')?'on':'';fb.innerHTML='<i class="dot" style="background:#fff;border:2px solid #dc2626"></i> Frame (red)';
+  const fb=document.createElement('button');fb.className=(tool==='box')?'on':'';fb.innerHTML='<i class="dot" style="background:#fff;border:2px solid #dc2626"></i> Frame';
   fb.onclick=()=>{setTool('box');closePopup()};w.appendChild(fb);
   p.appendChild(w);
 }
@@ -758,6 +772,7 @@ window.addEventListener('resize',size);
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{colors();draw()})}catch(e){}
 $('ver').textContent='App version: '+BUILD+' \u00b7 build '+(BUILD_RUN.indexOf('__')===0?'(browser preview)':BUILD_RUN);
 loadAll();[['mn','set'],['un','undo'],['rd','redo'],['bEr','erase'],['bSel','select'],['bDp','dup'],['bSv','save']].forEach(([id,k])=>{$(id).innerHTML=I[k]});ui();tabs();size();view(16);
+setTimeout(()=>{toast('Loaded: '+(BUILD_RUN.indexOf('__')===0?'Preview':BUILD_RUN))}, 1000);
 </script>
 </body>
 </html>
