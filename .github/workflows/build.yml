@@ -91,7 +91,12 @@ jobs:
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
-          cd android && ./gradlew assembleDebug
+          cd android
+          ./gradlew assembleDebug \
+            -Pandroid.injected.signing.store.file=$(pwd)/../debug.keystore \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.password=android
       - uses: actions/upload-artifact@v4
         with:
           name: floorplan-apk
