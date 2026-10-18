@@ -31,18 +31,51 @@ body.open #bk,body.open #sheet{display:block}
 .sl{font-size:12px;color:var(--mut);margin:14px 0 6px}
 .rw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .rw>button{flex:1 1 auto}
-#pal{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.chip{display:flex;flex-direction:column;align-items:flex-start;font-size:13px;line-height:1.25}
-.chip i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.28)}
-.chip small{color:var(--mut);font-size:11px}
+
+/* Increased grid gaps and inner padding for better touch targets */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom: 8px;}
+.g4>button,.g4>input{
+  width:100%;
+  min-height:46px;
+  padding:10px 2px;
+  font-size:13px;
+  text-align:center;
+  margin:0;
+  box-sizing:border-box;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.g4>input{padding:8px 4px;text-align:center;}
+
+/* Type palette spacing */
+#pal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.chip{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  line-height:1.25;
+  padding:8px 4px;
+  overflow:hidden;
+  border-radius:8px;
+  min-height:48px;
+}
+.chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}
+.chip i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.28)}
+.chip small{color:var(--mut);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}
+
 #st{font-size:12px;color:var(--mut);margin-top:12px}
 button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #bar2{display:flex;gap:4px;align-items:center;padding:0 6px 6px;flex:0 0 auto}
 #bar2::-webkit-scrollbar{display:none}
 #un:disabled{opacity:.5;border-color:#dc2626;color:var(--mut)}
 #rd:disabled{opacity:.45}
-#pz{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--mut);margin-bottom:6px}
-#pz input{width:64px;padding:8px 4px;text-align:center;font-size:15px}
 #dim{display:none!important}
 .dimbadge{display:none;height:44px;align-items:center;justify-content:center;padding:0 10px;font:bold 13px system-ui,sans-serif;background:var(--acbg);color:var(--ac);border:1px solid var(--ac);border-radius:10px;white-space:nowrap;flex:0 0 auto;max-width:140px;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px}
 .dimbadge.on{display:inline-flex}
@@ -83,25 +116,44 @@ body.ovo #ov{display:flex}
 <div id="sheet">
   <div class="sh"><span>Settings</span><button id="cl">Done</button></div>
   <div class="sl">Tip: scroll normally with one finger. To draw or select, touch and HOLD on the grid for a moment, then drag (it scrolls by itself near the edge). Or hold at point A, scroll freely, then hold at point B to join the two points. Hold the top tool button to pick a type or tool. Hold the Select button for Copy / Cut / Paste.</div>
-  <div class="sl">FILE (holds your sheets)</div>
-  <div class="rw"><input id="fnm" type="text" maxlength="30" style="flex:1;width:auto"><button id="frn">Rename</button></div>
-  <div class="rw" style="margin-top:6px"><button id="nfl">New file</button><button id="mfl">My files&hellip;</button></div>
-  <div class="sl">BACKUP / RESTORE (to move to a new app or phone)</div>
-  <div class="rw"><button id="bkm">Backup this file</button><button id="imb">Import backup file</button></div>
+  
+  <div class="sl">FILE</div>
+  <div class="g4">
+    <input id="fnm" type="text" maxlength="30" placeholder="File name">
+    <button id="frn">Rename</button>
+    <button id="nfl">New file</button>
+    <button id="mfl">My files</button>
+  </div>
   <input type="file" id="imp" accept=".json,application/json" style="display:none">
-  <div class="sl">DRAWING TOOL</div>
-  <div class="rw"><button data-t="pen">Pen</button><button data-t="fill">Fill</button></div>
-  <div class="sl">TYPE (with area)</div>
+  
+  <div class="sl">BACKUP / RESTORE &amp; AREA SIZE</div>
+  <div class="g4">
+    <button id="bkm">Backup</button>
+    <button id="imb">Import</button>
+    <input id="w" type="number" inputmode="numeric" value="25" placeholder="W (ft)">
+    <input id="l" type="number" inputmode="numeric" value="60" placeholder="L (ft)">
+  </div>
+
+  <div class="sl">DRAWING TOOL &amp; TYPE</div>
+  <div class="g4" style="margin-bottom:4px">
+    <button data-t="pen">Pen</button>
+    <button data-t="fill">Fill</button>
+    <button data-t="erase">Erase</button>
+    <button data-t="select">Select</button>
+  </div>
   <div id="pal"></div>
-    <div class="sl">ZOOM (grid size)</div>
-  <div class="rw"><button id="zm" style="flex:0">&minus;</button><input id="zs" type="range" min="1" max="80" value="16" style="flex:1;width:auto;padding:0"><button id="zp" style="flex:0">+</button></div>
-  <div class="sl">AREA SIZE of this sheet (feet)</div>
-  <div id="pz"><input id="w" type="number" inputmode="numeric" value="25" aria-label="Plot width in feet">×<input id="l" type="number" inputmode="numeric" value="60" aria-label="Plot length in feet">ft</div>
-  <div class="sl">THIS SHEET (floor)</div>
-  <div class="rw"><input id="nm" type="text" maxlength="24" style="flex:1;width:auto"><button id="rn">Rename</button></div>
-  <div class="rw" style="margin-top:6px"><button id="dl">Delete sheet</button></div>
-    <div class="sl">PLAN</div>
-  <div class="rw"><button id="clr">Clear all</button></div>
+  
+  <div class="sl">ZOOM &amp; PLAN</div>
+  <div class="rw" style="gap:8px;align-items:stretch;margin-bottom:16px">
+    <div style="flex:1;display:flex;gap:6px;align-items:center;background:var(--card);padding:6px;border-radius:10px;border:1px solid var(--bd)">
+      <button id="zm" style="flex:0;width:36px;padding:0;height:36px;border-radius:8px;font-size:16px;">&minus;</button>
+      <input id="zs" type="range" min="1" max="80" value="16" style="flex:1;width:auto;padding:0;border:none;background:transparent">
+      <button id="zp" style="flex:0;width:36px;padding:0;height:36px;border-radius:8px;font-size:16px;">+</button>
+      <span id="zpc" style="min-width:48px;text-align:center;font-size:13px;font-weight:bold;color:var(--ac);background:var(--acbg);padding:8px 4px;border-radius:8px">100%</span>
+    </div>
+    <button id="clr" style="flex:1;padding:0;min-height:50px;border-radius:10px;font-size:14px;">Clear all</button>
+  </div>
+  
   <div id="st"></div>
   <div class="sl" id="ver"></div>
 </div>
@@ -111,7 +163,7 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const BUILD='2026-10-18 i',BUILD_RUN='__BUILD__';
+const BUILD='2026-10-19 e',BUILD_RUN='__BUILD__';
 const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan (open sky)',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
 const isOpenT=v=>v===7||v===9||(v>=10&&v<=13);
 const isBarT=v=>v===1||v===3||v===4||v===15;
@@ -133,6 +185,7 @@ let sel=null,clip=null,pasteMode=false,gp=null,lastDraw='pen',anchor=null;
 let boxes=[];
 let rooms=[],typed=[],rG=null,rV=-1,gver=0,uU=null,uR=null,pv=false;
 let W=25,L=60,cols=0,rows=0,g=null,sc=16,ox=HX,oy=HY,tool='pen',cur=1,hist=[],redo=[],cw=0,ch=0,rc=null,raf=0,lastZ=0,flOn=false,st=null,pz=null,CL={};
+let zoomCycle = -1;
 const cv=$('cv'),ctx=cv.getContext('2d'),wrap=$('wrap');
 function colors(){const s=getComputedStyle(document.documentElement),f=v=>s.getPropertyValue(v).trim();CL={cv:f('--cv'),g1:f('--g1'),g2:f('--g2'),g3:f('--g3'),card:f('--card'),mut:f('--mut'),ac:f('--ac'),tx:f('--tx')}}
 function setDims(w,l,keep){const nc=Math.round(w*2),nr=Math.round(l*2),ng=new Uint8Array(nc*nr);
@@ -147,7 +200,7 @@ function setZoom(n){n=Math.min(80,Math.max(1,n));const cx=cw/2,cy=ch/2,wx=(cx-ox
 function draw(){if(!raf){raf=1;requestAnimationFrame(()=>{raf=0;render()})}}
 function render(){
   ctx.clearRect(0,0,cw,ch);
-  const z=Math.round(sc);if(z!==lastZ){lastZ=z;$('zs').value=z}
+  const z=Math.round(sc);if(z!==lastZ){lastZ=z;$('zs').value=z;const zpc=$('zpc');if(zpc)zpc.textContent=Math.round((z/16)*100)+'%';}
   const cu=hist.length>1,cr=redo.length>0;if(cu!==uU){uU=cu;$('un').disabled=!cu}if(cr!==uR){uR=cr;$('rd').disabled=!cr}
   ctx.save();ctx.beginPath();ctx.rect(HX,HY,cw-HX-RX,ch-HY-RY);ctx.clip();
   ctx.fillStyle=CL.cv;ctx.fillRect(ox,oy,cols*sc,rows*sc);
@@ -287,7 +340,7 @@ function lineTo(a,b,v){for(const q of lineCells(a,b))put(q.c,q.r,v)}
 function rect(a,b,mode,v){const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Math.min(a.r,b.r),r1=Math.max(a.r,b.r);
   for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)if(mode==='fill'||r===r0||r===r1||c===c0||c===c1)put(c,r,v)}
 function stats(){const n=new Array(T.length+1).fill(0);for(let i=0;i<g.length;i++)n[g[i]]++;
-  let tot=0;T.forEach((t,i)=>{tot+=n[i+1];$('pal').children[i].querySelector('small').textContent=(+(n[i+1]/4).toFixed(2))+' sq ft'});
+  let tot=0;T.forEach((t,i)=>{tot+=n[i+1];if($('pal').children[i])$('pal').children[i].querySelector('small').textContent=(+(n[i+1]/4).toFixed(2))+' sq ft'});
   $('st').textContent=`Plot ${W}\u00d7${L} ft = ${W*L} sq ft \u00b7 Painted ${+(tot/4).toFixed(2)} sq ft \u00b7 1 cell = 6 in`}
 let sheets=[],si=0,fileName='Blank',fileId='f1',store={cur:'f1',files:{}};
 function stash(){const s=sheets[si];if(!s)return;s.W=W;s.L=L;s.g=g;s.hist=hist;s.redo=redo;s.sc=sc;s.ox=ox;s.oy=oy;s.boxes=boxes}
@@ -305,7 +358,7 @@ function loadAll(){let o=null;
   if(!o){let v1=null;try{v1=JSON.parse(localStorage.getItem('fp_v1'))}catch(e){}
     o=newFileObj('Blank');if(v1&&v1.W&&v1.L&&v1.d)o.s[0]={n:'Sheet 1',W:v1.W,L:v1.L,d:v1.d};fileId='f1';store={cur:'f1',files:{}}}
   openObj(fileId,o);use(si)}
-function use(i){si=i;sel=null;anchor=null;const s=sheets[i];W=s.W;L=s.L;cols=Math.round(W*2);rows=Math.round(L*2);g=s.g;boxes=s.boxes||[];hist=s.hist;redo=s.redo;$('w').value=W;$('l').value=L;$('nm').value=s.n;$('fnm').value=fileName;$('fl').textContent=fileName;
+function use(i){si=i;sel=null;anchor=null;const s=sheets[i];W=s.W;L=s.L;cols=Math.round(W*2);rows=Math.round(L*2);g=s.g;boxes=s.boxes||[];hist=s.hist;redo=s.redo;$('w').value=W;$('l').value=L;$('fnm').value=fileName;$('fl').textContent=fileName;
   if(s.sc&&cw){sc=s.sc;ox=s.ox;oy=s.oy;clampView();draw();stats()}else if(cw)view(16);tabs()}
 function fileNames(){return Object.keys(store.files).map(id=>id===fileId?fileName:store.files[id].name)}
 function uFile(base){const ns=fileNames();let n=base,k=2;while(ns.includes(n))n=base+' '+(k++);return n}
@@ -341,7 +394,7 @@ function sheetActions(i){popup(p=>{
   const col=document.createElement('div');col.className='rw';col.style.cssText='margin-top:10px;flex-direction:column;flex-wrap:nowrap';
   const mk=(t,f,dis)=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='padding:13px;width:100%';if(dis){b.disabled=true;b.style.opacity=0.4}b.onclick=f;col.appendChild(b);return b};
   const inp=document.createElement('input');inp.type='text';inp.maxLength=24;inp.value=sheets[i].n;inp.style.cssText='width:100%;padding:11px;font-size:15px';col.appendChild(inp);
-  mk('Rename',()=>{const v=inp.value.trim().slice(0,24);if(!v)return;sheets[i].n=v;if(i===si)$('nm').value=v;save();tabs();closePopup();toast('Renamed')});
+  mk('Rename',()=>{const v=inp.value.trim().slice(0,24);if(!v)return;sheets[i].n=v;save();tabs();closePopup();toast('Renamed')});
   mk('Move\u2026',()=>moveUI(i),sheets.length<2);
   let armed=false;const del=mk('Delete',()=>{if(sheets.length<2)return;
     if(!armed){armed=true;del.textContent='Tap again to delete';setTimeout(()=>{armed=false;del.textContent='Delete'},2500);return}
@@ -407,7 +460,7 @@ function endDraw(apply){if(!st||st.t==='hand'||st.t==='pending')return;
   if(st.t==='fill'||st.t==='erase')rect(st.a,st.b,'fill',st.t==='erase'?0:cur);
   if(one){anchor={c:st.a.c,r:st.a.r};toast('Point A set: '+cellName(st.a.c,st.a.r)+'. Scroll, then hold at point B (hold A again to cancel)')}
   commit();save();stats()}
-function activate(){if(!st||st.t!=='pending')return;const c=cellAt(st.x,st.y);st.t=(pasteMode&&clip)?'paste':tool;st.a=c;st.b=c;st.p={x:st.x,y:st.y};
+function activate(){if(!st||st.t!=='pending')return;zoomCycle=-1;const c=cellAt(st.x,st.y);st.t=(pasteMode&&clip)?'paste':tool;st.a=c;st.b=c;st.p={x:st.x,y:st.y};
   if(st.t!=='paste'&&st.t!=='box'&&anchor){st.conn=true;st.a={c:anchor.c,r:anchor.r}}
   if(st.t==='pen'&&!st.conn)put(c.c,c.r,cur);
   if(st.t==='paste')gp=ghostPos(c);
@@ -424,15 +477,15 @@ function auto(){if(!st||st.t==='hand'||st.t==='pending'){as=false;return}
   requestAnimationFrame(auto)}
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('pointerdown',e=>{rc=cv.getBoundingClientRect();const p=pos(e);if(p.x<HX||p.y<HY||p.x>cw-RX||p.y>ch-RY)return;flOn=false;cv.setPointerCapture(e.pointerId);P.set(e.pointerId,p);
-  if(P.size===2){if(st&&st.t==='pending')clearTimeout(st.timer);else endDraw(false);st=null;const [a,b]=[...P.values()];pz={d:Math.hypot(a.x-b.x,a.y-b.y)||1,sc,x:(a.x+b.x)/2,y:(a.y+b.y)/2,ox,oy};draw();return}
+  if(P.size===2){zoomCycle=-1;if(st&&st.t==='pending')clearTimeout(st.timer);else endDraw(false);st=null;const [a,b]=[...P.values()];pz={d:Math.hypot(a.x-b.x,a.y-b.y)||1,sc,x:(a.x+b.x)/2,y:(a.y+b.y)/2,ox,oy};draw();return}
   if(P.size>2)return;
   st={t:'pending',x:p.x,y:p.y,vx:0,vy:0,ts:e.timeStamp,timer:setTimeout(activate,260)}});
 cv.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;const p=pos(e);P.set(e.pointerId,p);
   if(P.size===2&&pz){const [a,b]=[...P.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
     const ns=Math.min(80,Math.max(1,pz.sc*d/pz.d)),wx=(pz.x-pz.ox)/pz.sc,wy=(pz.y-pz.oy)/pz.sc;sc=ns;ox=mx-wx*ns;oy=my-wy*ns;clampView();draw();return}
   if(!st)return;
-  if(st.t==='pending'){if(Math.hypot(p.x-st.x,p.y-st.y)<10)return;clearTimeout(st.timer);st.t='hand';st.ts=e.timeStamp}
-  if(st.t==='hand'){const dx=p.x-st.x,dy=p.y-st.y,dt=Math.max(1,e.timeStamp-st.ts);
+  if(st.t==='pending'){if(Math.hypot(p.x-st.x,p.y-st.y)<10)return;clearTimeout(st.timer);st.t='hand';st.ts=e.timeStamp;zoomCycle=-1;}
+  if(st.t==='hand'){zoomCycle=-1;const dx=p.x-st.x,dy=p.y-st.y,dt=Math.max(1,e.timeStamp-st.ts);
     st.vx=0.7*st.vx+0.3*dx/dt;st.vy=0.7*st.vy+0.3*dy/dt;st.ts=e.timeStamp;ox+=dx;oy+=dy;st.x=p.x;st.y=p.y;clampView();draw();return}
   st.p=p;if(!st.mv&&Math.hypot(p.x-st.x,p.y-st.y)>8)st.mv=true;const c=cellAt(p.x,p.y);
   if(st.t==='pen'&&!st.conn)lineTo(st.b,c,cur);
@@ -445,7 +498,7 @@ const up=e=>{let dbl=false;if(!P.has(e.pointerId))return;P.delete(e.pointerId);i
     else endDraw(true);
     st=null;if(!pv)gp=null;draw();if(dbl)fitAll()}};
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-cv.addEventListener('wheel',e=>{e.preventDefault();rc=cv.getBoundingClientRect();const p=pos(e),ns=Math.min(80,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15))),wx=(p.x-ox)/sc,wy=(p.y-oy)/sc;sc=ns;ox=p.x-wx*sc;oy=p.y-wy*sc;clampView();draw()},{passive:false});
+cv.addEventListener('wheel',e=>{zoomCycle=-1;e.preventDefault();rc=cv.getBoundingClientRect();const p=pos(e),ns=Math.min(80,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15))),wx=(p.x-ox)/sc,wy=(p.y-oy)/sc;sc=ns;ox=p.x-wx*sc;oy=p.y-wy*sc;clampView();draw()},{passive:false});
 
 /* UI */
 function ui(){const t=T[cur-1];
@@ -461,13 +514,13 @@ function ui(){const t=T[cur-1];
     else x.classList.toggle('on',tool==='box');
   });
   $('bEr').classList.toggle('on',tool==='erase');$('bSel').classList.toggle('on',tool==='select')}
-function setTool(t){tool=t;pasteMode=false;anchor=null;if(t!=='select'){sel=null;clip=null}if(t==='pen'||t==='fill')lastDraw=t;ui()}
+function setTool(t){zoomCycle=-1;tool=t;pasteMode=false;anchor=null;if(t!=='select'){sel=null;clip=null}if(t==='pen'||t==='fill')lastDraw=t;ui()}
 T.forEach((t,i)=>{const b=document.createElement('button');b.className='chip';
   b.innerHTML=`<span><i style="background:${t.c}"></i>${t.n}</span><small>0 sq ft</small>`;
-  b.onclick=()=>{cur=i+1;pasteMode=false;if(tool==='erase'||tool==='select'||tool==='box'){tool=lastDraw;sel=null;clip=null;anchor=null}ui()};$('pal').appendChild(b)});
+  b.onclick=()=>{zoomCycle=-1;cur=i+1;pasteMode=false;if(tool==='erase'||tool==='select'||tool==='box'){tool=lastDraw;sel=null;clip=null;anchor=null}ui()};$('pal').appendChild(b)});
 {const fb=document.createElement('button');fb.className='chip';
   fb.innerHTML='<span><i style="background:#fff;border:2px solid #dc2626"></i>Frame (red)</span><small>outline only</small>';
-  fb.onclick=()=>{sel=null;clip=null;anchor=null;pasteMode=false;setTool('box')};
+  fb.onclick=()=>{zoomCycle=-1;sel=null;clip=null;anchor=null;pasteMode=false;setTool('box')};
   $('pal').appendChild(fb)}
 document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTool(b.dataset.t));
 const sheet=o=>document.body.classList.toggle('open',o);
@@ -476,11 +529,14 @@ $('mn').onclick=()=>sheet(true);$('cl').onclick=()=>sheet(false);$('bk').onclick
 $('un').onclick=()=>{if(hist.length>1){redo.push(hist.pop());const s=hist[hist.length-1];g=s.g.slice();boxes=s.b.map(b=>({...b}));sel=null;anchor=null;gp=null;save();stats();draw()}};
 $('rd').onclick=()=>{if(redo.length){const s=redo.pop();hist.push(s);g=s.g.slice();boxes=s.b.map(b=>({...b}));sel=null;anchor=null;gp=null;save();stats();draw()}};
 
-$('zs').oninput=()=>setZoom(+$('zs').value);$('zp').onclick=()=>setZoom(sc*1.25);$('zm').onclick=()=>setZoom(sc/1.25);
+$('zs').oninput=()=>{zoomCycle=-1;setZoom(+$('zs').value)};
+$('zp').onclick=()=>{zoomCycle=-1;setZoom(Math.round(sc)+4)};
+$('zm').onclick=()=>{zoomCycle=-1;setZoom(Math.round(sc)-4)};
+
 function applySize(){const w=Math.min(150,Math.max(5,Math.round(+$('w').value||W))),l=Math.min(150,Math.max(5,Math.round(+$('l').value||L)));
-  $('w').value=w;$('l').value=l;if(w===W&&l===L)return;setDims(w,l,true);sel=null;anchor=null;hist=[snap()];redo=[];save();view(Math.max(10,sc))}
+  $('w').value=w;$('l').value=l;if(w===W&&l===L)return;zoomCycle=-1;setDims(w,l,true);sel=null;anchor=null;hist=[snap()];redo=[];save();view(Math.max(10,sc))}
 ['w','l'].forEach(id=>{$(id).onchange=applySize;$(id).onkeydown=e=>{if(e.key==='Enter')e.target.blur()}});
-let ct=null;$('clr').onclick=()=>{if(ct){clearTimeout(ct);ct=null;$('clr').textContent='Clear all';g.fill(0);boxes.length=0;gver++;commit();save();stats();draw();sheet(false)}else{$('clr').textContent='Tap again to clear';ct=setTimeout(()=>{ct=null;$('clr').textContent='Clear all'},3000)}};
+let ct=null;$('clr').onclick=()=>{if(ct){clearTimeout(ct);ct=null;$('clr').textContent='Clear all';zoomCycle=-1;g.fill(0);boxes.length=0;gver++;commit();save();stats();draw();sheet(false)}else{$('clr').textContent='Tap again to clear';ct=setTimeout(()=>{ct=null;$('clr').textContent='Clear all'},3000)}};
 
 /* save as image / pdf */
 function withSheet(sh,fn){const sv={g,cols,rows,W,L};g=sh.g;W=sh.W;L=sh.L;cols=Math.round(W*2);rows=Math.round(L*2);try{return fn()}finally{g=sv.g;cols=sv.cols;rows=sv.rows;W=sv.W;L=sv.L}}
@@ -678,9 +734,18 @@ holdable($('md'),()=>{setTool(tool==='pen'?'fill':tool==='fill'?'pen':lastDraw)}
 holdable($('bDp'),()=>toast('Hold the Duplicate button to copy this sheet'),()=>{addSheet(true);toast('Duplicated as '+sheets[si].n)},500);
 holdable($('bSel'),()=>{setTool(tool==='select'?lastDraw:'select');if(tool==='select')toast('Hold on the plan and drag, or hold at two points')},()=>popup(selUI,true));
 $('bSv').onclick=()=>{pairL=-1;pairR=-1;popup(saveUI)};
-let fitW=false;
+
 function fitAll(){P.clear();st=null;pz=null;flOn=false;as=false;if(pv){pv=false;gp=null}sheet(false);closePopup();
-  fitW=!fitW;if(fitW){fitWidth();toast('Fit: full width (scroll up/down). Double-tap again for the whole plan')}else{fit();toast('Fit: whole plan on screen. Double-tap again for full width')}}
+  zoomCycle = (zoomCycle + 1) % 3;
+  if (zoomCycle === 0) {
+    fitWidth();
+  } else if (zoomCycle === 1) {
+    setZoom(32); 
+  } else {
+    fit();
+  }
+}
+
 $('nfl').onclick=()=>{sheet(false);newFile()};$('mfl').onclick=()=>{sheet(false);popup(filesUI)};$('bkm').onclick=()=>{sheet(false);exportBackup(true)};
 $('frn').onclick=()=>{const v=$('fnm').value.trim().slice(0,30);if(!v)return;fileName=v;$('fl').textContent=v;save();toast('File renamed')};
 $('imb').onclick=()=>{$('imp').value='';$('imp').click()};
@@ -688,12 +753,7 @@ $('imp').onchange=()=>{const f=$('imp').files&&$('imp').files[0];if(!f)return;co
   rd.onload=()=>{try{const d=parseBackup(String(rd.result));sheet(false);popup(p=>importUI(p,d))}catch(e){toast('That is not a floor plan backup file')}};rd.readAsText(f)};
 function eraseSel(){for(let r=sel.r0;r<=sel.r1;r++)for(let c=sel.c0;c<=sel.c1;c++)put(c,r,0);sel=null;clip=null;commit();save();stats();draw()}
 $('bEr').onclick=()=>{if(sel){eraseSel();toast('Selection erased');return}setTool(tool==='erase'?lastDraw:'erase');if(tool==='erase')toast('Hold and drag over an area to erase it')};
-$('rn').onclick=()=>{const v=$('nm').value.trim().slice(0,24);if(!v)return;sheets[si].n=v;save();tabs()};
 
-(function(){let t=null;const b=$('dl');b.onclick=()=>{if(t){clearTimeout(t);t=null;b.textContent='Delete sheet';
-  if(sheets.length<2){b.textContent='Need at least 1 sheet';setTimeout(()=>{b.textContent='Delete sheet'},2000);return}
-  sheets.splice(si,1);si=Math.min(si,sheets.length-1);use(si);save();sheet(false)}
-  else{b.textContent='Tap again to delete';t=setTimeout(()=>{t=null;b.textContent='Delete sheet'},3000)}}})();$('oc').onclick=()=>document.body.classList.remove('ovo');
 window.addEventListener('resize',size);
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{colors();draw()})}catch(e){}
 $('ver').textContent='App version: '+BUILD+' \u00b7 build '+(BUILD_RUN.indexOf('__')===0?'(browser preview)':BUILD_RUN);
