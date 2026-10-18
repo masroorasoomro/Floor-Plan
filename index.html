@@ -16,7 +16,6 @@ button.on{background:var(--acbg);border-color:var(--ac)}
 .top{display:flex;gap:4px;padding:6px 6px 3px}
 .top button,#bar2 button{flex:1 1 0;min-width:0;height:44px;padding:0;display:flex;align-items:center;justify-content:center;position:relative}
 .top svg,#bar2 svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.sw{position:absolute;right:5px;bottom:5px;width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.4);pointer-events:none}
 #fl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 #tl{font-weight:600;color:var(--tx);white-space:nowrap}
 #md{flex:1 1 0}
@@ -115,7 +114,6 @@ body.ovo #ov{display:flex}
 <div id="bk"></div>
 <div id="sheet">
   <div class="sh"><span>Settings</span><button id="cl">Done</button></div>
-  <div class="sl">Tip: scroll normally with one finger. To draw or select, touch and HOLD on the grid for a moment, then drag (it scrolls by itself near the edge). Or hold at point A, scroll freely, then hold at point B to join the two points. Hold the top tool button to pick a type or tool. Hold the Select button for Copy / Cut / Paste.</div>
   
   <div class="sl">FILE</div>
   <div class="g4">
@@ -163,7 +161,7 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const BUILD='2026-10-19 f',BUILD_RUN='__BUILD__';
+const BUILD='2026-10-19 g',BUILD_RUN='__BUILD__';
 const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
 const isOpenT=v=>v===7||v===9||(v>=10&&v<=13);
 const isBarT=v=>v===1||v===3||v===4||v===15;
@@ -505,7 +503,23 @@ function ui(){const t=T[cur-1];
   let icon;
   if(tool==='box')icon=I.box;
   else icon=lastDraw==='fill'?I.fill:I.pen;
-  $('md').innerHTML=icon+(tool==='box'?'':'<i class="sw" style="background:'+t.c+'"></i>');
+
+  if(tool==='box'){
+    $('md').style.backgroundColor='';
+    $('md').style.color='';
+    $('md').style.borderColor='';
+    $('md').innerHTML=icon;
+  } else {
+    const hex=t.c.replace('#','');
+    const r=parseInt(hex.substr(0,2),16)||0, g=parseInt(hex.substr(2,2),16)||0, b_=parseInt(hex.substr(4,2),16)||0;
+    const yiq=(r*299+g*587+b_*114)/1000;
+    const txtColor=yiq>=128?'#000':'#fff';
+    $('md').style.backgroundColor=t.c;
+    $('md').style.color=txtColor;
+    $('md').style.borderColor='rgba(0,0,0,.2)';
+    $('md').innerHTML=icon;
+  }
+
   $('md').classList.toggle('on',tool==='pen'||tool==='fill'||tool==='box');
   $('tl').textContent=tool==='erase'?'Erase':tool==='select'?'Select':tool==='box'?'Frame':TN[tool]+' \u00b7 '+t.n;
   document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===tool));
@@ -514,6 +528,7 @@ function ui(){const t=T[cur-1];
     else x.classList.toggle('on',tool==='box');
   });
   $('bEr').classList.toggle('on',tool==='erase');$('bSel').classList.toggle('on',tool==='select')}
+
 function setTool(t){zoomCycle=-1;tool=t;pasteMode=false;anchor=null;if(t!=='select'){sel=null;clip=null}if(t==='pen'||t==='fill')lastDraw=t;ui()}
 
 T.forEach((t,i)=>{
