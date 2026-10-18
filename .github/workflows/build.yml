@@ -22,7 +22,7 @@ jobs:
           npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/filesystem @capacitor/share
           mkdir www && cp index.html www/
           sed -i "s/__BUILD__/${{ github.run_number }} (${GITHUB_SHA::7})/" www/index.html
-          npx cap init "Floor Plan" com.example.floorplan --web-dir www
+          npx cap init "Floor Plan" com.masroor.floorplan --web-dir www
           npx cap add android
       - name: App icon
         run: |
@@ -82,7 +82,6 @@ jobs:
         run: |
           mkdir -p ~/.android
           cp debug.keystore ~/.android/debug.keystore
-          # Capacitor creates its own debug.keystore, we need to replace it with ours
           if [ -d "android/app" ]; then
             cp debug.keystore android/app/debug.keystore
           fi
