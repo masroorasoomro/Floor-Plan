@@ -50,6 +50,31 @@ body.open #bk,body.open #sheet{display:block}
 }
 .g4>input{padding:8px 4px;text-align:center;}
 
+/* Custom Styles for Tool Icons */
+.g4 > button.tool-btn {
+  border: 1.5px solid #000;
+  background: transparent;
+  color: #000;
+  padding: 0;
+}
+.g4 > button.tool-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.g4 > button.tool-btn.on {
+  background: var(--acbg);
+  border-color: var(--ac);
+}
+.g4 > button.tool-btn.on svg {
+  fill: #000;
+  stroke: #000;
+}
+
 #pal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
 .chip{
   display:flex;
@@ -134,10 +159,10 @@ body.ovo #ov{display:flex}
 
   <div class="sl">DRAWING TOOL &amp; TYPE</div>
   <div class="g4" style="margin-bottom:4px">
-    <button data-t="fill">Fill</button>
-    <button data-t="pen">Pen</button>
-    <button data-t="erase">Erase</button>
-    <button data-t="select">Select</button>
+    <button data-t="fill" class="tool-btn"></button>
+    <button data-t="pen" class="tool-btn"></button>
+    <button data-t="erase" class="tool-btn"></button>
+    <button data-t="select" class="tool-btn"></button>
   </div>
   <div id="pal"></div>
   
@@ -161,7 +186,7 @@ body.ovo #ov{display:flex}
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const BUILD='2026-10-19 g',BUILD_RUN='__BUILD__';
+const BUILD='2026-10-19 h',BUILD_RUN='__BUILD__';
 const T=[{n:'Wall',c:'#374151'},{n:'Room',c:'#fff3c4'},{n:'Door',c:'#e0b88e'},{n:'Window',c:'#bfe3f7'},{n:'Kitchen',c:'#ffdcc0'},{n:'Bath',c:'#c6f0ea'},{n:'Stairs',c:'#e2daff'},{n:'Lawn',c:'#d2f4d8'},{n:'Extra',c:'#fbd7e7'},{n:'Lounge',c:'#dbeafe'},{n:'Passage',c:'#e5e7eb'},{n:'Porch',c:'#fde68a'},{n:'Sehan',c:'#a7e8a0'},{n:'Guest room',c:'#f3e8ff'},{n:'Ventilator',c:'#9fd3e0'}];
 const isOpenT=v=>v===7||v===9||(v>=10&&v<=13);
 const isBarT=v=>v===1||v===3||v===4||v===15;
@@ -530,6 +555,12 @@ function ui(){const t=T[cur-1];
   $('bEr').classList.toggle('on',tool==='erase');$('bSel').classList.toggle('on',tool==='select')}
 
 function setTool(t){zoomCycle=-1;tool=t;pasteMode=false;anchor=null;if(t!=='select'){sel=null;clip=null}if(t==='pen'||t==='fill')lastDraw=t;ui()}
+
+// Inject SVGs into the Tool buttons
+document.querySelector('.tool-btn[data-t="fill"]').innerHTML = I.fill;
+document.querySelector('.tool-btn[data-t="pen"]').innerHTML = I.pen;
+document.querySelector('.tool-btn[data-t="erase"]').innerHTML = I.erase;
+document.querySelector('.tool-btn[data-t="select"]').innerHTML = I.select;
 
 T.forEach((t,i)=>{
   const b=document.createElement('button');b.className='chip';
