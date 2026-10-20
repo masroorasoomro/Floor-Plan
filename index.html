@@ -190,7 +190,7 @@ body.kb-open #ppb { position: relative !important; top: auto !important; left: a
 <div id="ov"><div class="ovb"><div class="sh"><span id="ot">Your plan</span></div><img id="oi" alt="plan"><div class="rw"><a id="oa" class="btn">Download</a><button id="oc">Close</button></div><div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const BUILD='2026-10-20 h',BUILD_RUN='__BUILD__';
+const BUILD='2026-10-20 k',BUILD_RUN='__BUILD__';
 
 const T=[
   {n:'Wall', c:'#374151'},
@@ -236,7 +236,6 @@ let zoomCycle = -1;
 let cycleIdx = 1;
 const cv=$('cv'),ctx=cv.getContext('2d'),wrap=$('wrap');
 
-// Keyboard Fix with safe delays
 document.addEventListener('focusin', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
     setTimeout(() => { document.body.classList.add('kb-open'); }, 350);
@@ -448,7 +447,7 @@ function labelBox(c,cx,cy,rw,rh,items,fsMax,halo,col){
 function findTyped(){
   const vis=new Uint8Array(cols*rows),out=[],stack=[];
   for(let i=0;i<g.length;i++){
-    const v=g[i];if(vis[i]||!isOpenT(v))continue;
+    const v=g[i];if(vis[i]||v===0||!isOpenT(v))continue;
     let n=0,c0=1e9,c1=-1,r0=1e9,r1=-1;stack.length=0;stack.push(i);vis[i]=1;
     while(stack.length){
       const k=stack.pop(),r=(k/cols)|0,c=k-r*cols;n++;
@@ -489,6 +488,19 @@ function removeFramesInRect(c0, r0, c1, r1) {
     if (c0 <= bx.c1 && c1 >= bx.c0 && r0 <= bx.r1 && r1 >= bx.r0) {boxes.splice(i, 1);changed = true}
   }
   return changed;
+}
+function createBox(c0, r0, c1, r1) {
+  c0 = Math.max(0,Math.min(cols-1,Math.min(c0,c1)));
+  c1 = Math.max(0,Math.min(cols-1,Math.max(c0,c1)));
+  r0 = Math.max(0,Math.min(rows-1,Math.min(r0,r1)));
+  r1 = Math.max(0,Math.min(rows-1,Math.max(r0,r1)));
+  if(c1>=c0 && r1>=r0){
+    for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++) put(c,r,0);
+    removeFramesInRect(c0, r0, c1, r1);
+    const bx={c0,r0,c1,r1,name:''};
+    boxes.push(bx);commit();save();draw();stats();
+    setTimeout(()=>popup(p=>boxNameUI(p,bx),true),0);
+  }
 }
 function stats(){
   const n=new Array(T.length+1).fill(0);for(let i=0;i<g.length;i++)n[g[i]]++;
@@ -612,6 +624,7 @@ function endDraw(apply){
   if(!apply){if(pen&&!st.conn){commit();save();stats()}return}
   if(st.conn){anchor=null;
     if(st.t==='select'){setSel(st.a,st.b);setTimeout(()=>popup(selUI,true),0);return}
+    if(st.t==='box'){ createBox(st.a.c, st.a.r, st.b.c, st.b.r); return; }
     if(pen)lineTo(st.a,st.b,cur);else {removeFramesInRect(Math.min(st.a.c,st.b.c), Math.min(st.a.r,st.b.r), Math.max(st.a.c,st.b.c), Math.max(st.a.r,st.b.r));rect(st.a,st.b,'fill',st.t==='erase'?0:cur);}
     commit();save();stats();return
   }
@@ -628,14 +641,10 @@ function endDraw(apply){
     return
   }
   if(st.t==='box'){
-    const c0=Math.max(0,Math.min(cols-1,Math.min(st.a.c,st.b.c))),c1=Math.min(cols-1,Math.max(0,Math.max(st.a.c,st.b.c)));
-    const r0=Math.max(0,Math.min(rows-1,Math.min(st.a.r,st.b.r))),r1=Math.min(rows-1,Math.max(0,Math.max(st.a.r,st.b.r)));
-    if(c1>c0||r1>r0){
-      for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++) put(c,r,0);
-      removeFramesInRect(c0, r0, c1, r1);
-      const bx={c0,r0,c1,r1,name:''};
-      boxes.push(bx);commit();save();draw();
-      setTimeout(()=>popup(p=>boxNameUI(p,bx),true),0);
+    if(one) {
+        anchor={c:st.a.c,r:st.a.r};
+    } else {
+        createBox(st.a.c, st.a.r, st.b.c, st.b.r);
     }
     return
   }
@@ -649,7 +658,7 @@ function endDraw(apply){
 
 function activate(){
   if(!st||st.t!=='pending')return;zoomCycle=-1;const c=cellAt(st.x,st.y);st.t=(pasteMode&&clip)?'paste':tool;st.a=c;st.b=c;st.p={x:st.x,y:st.y};
-  if(st.t!=='paste'&&st.t!=='box'&&anchor){st.conn=true;st.a={c:anchor.c,r:anchor.r}}
+  if(st.t!=='paste'&&anchor){st.conn=true;st.a={c:anchor.c,r:anchor.r}}
   if(st.t==='pen'&&!st.conn)put(c.c,c.r,cur);
   if(st.t==='paste')gp=ghostPos(c);
   try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
