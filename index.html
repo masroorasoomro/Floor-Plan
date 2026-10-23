@@ -110,10 +110,10 @@ body.kb-open #ppb{position:relative!important;top:auto!important;left:auto!impor
 
   <div class="sl">STAIRS STEP SIZE (per step)</div>
   <div class="g4" style="margin-bottom:8px">
-    <button id="ss1">1 ft</button>
+    <button id="ss1" class="on">1 ft</button>
     <button id="ss2">1.5 ft</button>
     <button id="ss3">2 ft</button>
-    <button id="ss4" class="on">3 ft</button>
+    <button id="ss4">3 ft</button>
   </div>
 
   <div class="sl">DRAWING TOOL</div>
@@ -152,7 +152,7 @@ body.kb-open #ppb{position:relative!important;top:auto!important;left:auto!impor
   <div class="sl">If Download does not work, long-press the image and choose Save image.</div></div></div>
 <script>
 const $=id=>document.getElementById(id);
-const BUILD='2026-10-23 e',BUILD_RUN='__BUILD__';
+const BUILD='2026-10-23 j',BUILD_RUN='__BUILD__';
 
 const T=[
   {n:'Wall', c:'#374151'},
@@ -196,7 +196,7 @@ const HX=30,HY=30,RX=30,RY=30;
 let sel=null,clip=null,pasteMode=false,gp=null,lastDraw='fill',anchor=null;
 let boxes=[];
 let stairs=[];
-let stepSize=6;
+let stepSize=2; // default 1 ft (1 cell = 6 in, so 2 cells = 1 ft)
 let rooms=[],typed=[],rG=null,rV=-1,gver=0,uU=null,uR=null,pv=false;
 let W=25,L=60,cols=0,rows=0,g=null,sc=16,ox=HX,oy=HY,tool='fill',cur=1,hist=[],redo=[],cw=0,ch=0,rc=null,raf=0,lastZ=0,flOn=false,st=null,pz=null,CL={};
 let zoomCycle = -1;
@@ -350,58 +350,90 @@ function render(){
   ctx.restore();headers();updateDim()
 }
 
+/* ---- STAIRS GROUPS: adjacent blocks (any orientation) merge; index = draw order ---- */
+function stairsGroups(){
+  const n=stairs.length;
+  if(!n)return[];
+  const parent=[...Array(n).keys()];
+  const find=x=>parent[x]===x?x:parent[x]=find(parent[x]);
+  const touch=(a,b)=>{
+    if((a.r1+1===b.r0||b.r1+1===a.r0)&&a.c0<=b.c1&&b.c0<=a.c1)return true;
+    if((a.c1+1===b.c0||b.c1+1===a.c0)&&a.r0<=b.r1&&b.r0<=a.r1)return true;
+    return false;
+  };
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(touch(stairs[i],stairs[j]))parent[find(i)]=find(j);
+  const map=new Map();
+  for(let i=0;i<n;i++){
+    const gp=find(i);
+    if(!map.has(gp))map.set(gp,[]);
+    map.get(gp).push(i);
+  }
+  const out=[];
+  for(const ids of map.values()){
+    ids.sort((a,b)=>a-b);
+    out.push(ids);
+  }
+  return out;
+}
+
 function drawStairsText() {
-  if(!stairs || !stairs.length) return;
-  const fs = Math.max(10, Math.min(16, Math.round(sc * 0.8)));
-  const lc = '#3b82f6';
-  let stepNum = 1;
-  for(const s of stairs){
-    const c0=s.c0, r0=s.r0, c1=s.c1, r1=s.r1, v=s.v;
-    const w=c1-c0+1, h=r1-r0+1;
-    if(ox+c1*sc<HX || ox+c0*sc>cw-RX || oy+r1*sc<HY || oy+r0*sc>ch-RY) continue;
-    ctx.strokeStyle=lc;
-    ctx.lineWidth=Math.max(2, sc/5);
-    ctx.strokeRect(ox+c0*sc, oy+r0*sc, w*sc, h*sc);
-    ctx.lineWidth=Math.max(1.5, sc/6);
-    if (v === 14) {
-      let x = 0;
-      while (x < w) {
-        const sw = Math.min(stepSize, w - x);
-        if (x > 0) {
-          ctx.beginPath();
-          ctx.moveTo(ox + (c0+x)*sc, oy + r0*sc);
-          ctx.lineTo(ox + (c0+x)*sc, oy + (r0+h)*sc);
-          ctx.stroke();
-        }
-        const cx = ox + (c0 + x + sw/2) * sc;
-        const cy = oy + (r0 + h/2) * sc;
-        const items = [
-          { t: 'Step ' + stepNum, b: true },
-          { t: fmtIn(sw*6) + ' × ' + fmtIn(h*6), b: false}
-        ];
-        labelBoxRot(ctx, cx, cy, sw*sc, h*sc, items, fs, CL.cv, lc, -Math.PI/2);
-        x += sw;
-        stepNum++;
+  if(!stairs.length)return;
+  const fs=Math.max(10,Math.min(16,Math.round(sc*0.8)));
+  const lc='#3b82f6';
+  const groups=stairsGroups();
+  for(const ids of groups){
+    let stepNum=1;
+    for(const id of ids){
+      const s=stairs[id];
+      const c0=s.c0,r0=s.r0,c1=s.c1,r1=s.r1,v=s.v,ss=s.ss||stepSize;
+      const w=c1-c0+1,h=r1-r0+1;
+      if(ox+c1*sc<HX||ox+c0*sc>cw-RX||oy+r1*sc<HY||oy+r0*sc>ch-RY){
+        if(v===14){let x=0;while(x<w){const sw=Math.min(ss,w-x);x+=sw;stepNum++;}}
+        else{let y=0;while(y<h){const sh=Math.min(ss,h-y);y+=sh;stepNum++;}}
+        continue;
       }
-    } else if (v === 15) {
-      let y = 0;
-      while (y < h) {
-        const sh = Math.min(stepSize, h - y);
-        if (y > 0) {
-          ctx.beginPath();
-          ctx.moveTo(ox + c0*sc, oy + (r0+y)*sc);
-          ctx.lineTo(ox + (c0+w)*sc, oy + (r0+y)*sc);
-          ctx.stroke();
+      ctx.strokeStyle=lc;
+      ctx.lineWidth=Math.max(2,sc/5);
+      ctx.strokeRect(ox+c0*sc,oy+r0*sc,w*sc,h*sc);
+      ctx.lineWidth=Math.max(1.5,sc/6);
+      if(v===14){
+        let x=0;
+        while(x<w){
+          const sw=Math.min(ss,w-x);
+          if(x>0){
+            ctx.beginPath();
+            ctx.moveTo(ox+(c0+x)*sc,oy+r0*sc);
+            ctx.lineTo(ox+(c0+x)*sc,oy+(r0+h)*sc);
+            ctx.stroke();
+          }
+          const cx=ox+(c0+x+sw/2)*sc;
+          const cy=oy+(r0+h/2)*sc;
+          const items=[
+            {t:'Step '+stepNum,b:true},
+            {t:fmtIn(sw*6)+' × '+fmtIn(h*6),b:false}
+          ];
+          labelBoxRot(ctx,cx,cy,sw*sc,h*sc,items,fs,CL.cv,lc,-Math.PI/2);
+          x+=sw;stepNum++;
         }
-        const cx = ox + (c0 + w/2) * sc;
-        const cy = oy + (r0 + y + sh/2) * sc;
-        const items = [
-          { t: 'Step ' + stepNum, b: true },
-          { t: fmtIn(sh*6) + ' × ' + fmtIn(w*6), b: false}
-        ];
-        labelBox(ctx, cx, cy, w*sc, sh*sc, items, fs, CL.cv, lc);
-        y += sh;
-        stepNum++;
+      } else if(v===15){
+        let y=0;
+        while(y<h){
+          const sh=Math.min(ss,h-y);
+          if(y>0){
+            ctx.beginPath();
+            ctx.moveTo(ox+c0*sc,oy+(r0+y)*sc);
+            ctx.lineTo(ox+(c0+w)*sc,oy+(r0+y)*sc);
+            ctx.stroke();
+          }
+          const cx=ox+(c0+w/2)*sc;
+          const cy=oy+(r0+y+sh/2)*sc;
+          const items=[
+            {t:'Step '+stepNum,b:true},
+            {t:fmtIn(sh*6)+' × '+fmtIn(w*6),b:false}
+          ];
+          labelBox(ctx,cx,cy,w*sc,sh*sc,items,fs,CL.cv,lc);
+          y+=sh;stepNum++;
+        }
       }
     }
   }
@@ -471,12 +503,12 @@ function removeStairsInRect(c0,r0,c1,r1){
     if(c0<=s.c1&&c1>=s.c0&&r0<=s.r1&&r1>=s.r0) stairs.splice(i,1);
   }
 }
-function addStairsRect(c0,r0,c1,r1,v){
+function addStairsRect(c0,r0,c1,r1,v,ss){
   c0=Math.max(0,Math.min(cols-1,c0));c1=Math.max(0,Math.min(cols-1,c1));
   r0=Math.max(0,Math.min(rows-1,r0));r1=Math.max(0,Math.min(rows-1,r1));
   if(c1<c0||r1<r0)return;
   removeStairsInRect(c0,r0,c1,r1);
-  stairs.push({c0,r0,c1,r1,v});
+  stairs.push({c0,r0,c1,r1,v,ss:ss||stepSize});
   gver++;
 }
 function findRooms(){
@@ -576,14 +608,14 @@ function lineCells(a,b){const out=[];let x=a.c,y=a.r,dx=Math.abs(b.c-x),dy=-Math
   for(let i=0;i<4000;i++){out.push({c:x,r:y});if(x===b.c&&y===b.r)break;const e2=2*e;if(e2>=dy){e+=dy;x+=sx}if(e2<=dx){e+=dx;y+=sy}}return out}
 function lineTo(a,b,v){
   const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Math.min(a.r,b.r),r1=Math.max(a.r,b.r);
-  if(v===14||v===15){addStairsRect(c0,r0,c1,r1,v);return}
+  if(v===14||v===15){addStairsRect(c0,r0,c1,r1,v,stepSize);return}
   removeFramesInRect(c0,r0,c1,r1);
   removeStairsInRect(c0,r0,c1,r1);
   for(const q of lineCells(a,b))put(q.c,q.r,v)
 }
 function rect(a,b,mode,v){
   const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Math.min(a.r,b.r),r1=Math.max(a.r,b.r);
-  if(v===14||v===15){addStairsRect(c0,r0,c1,r1,v);return}
+  if(v===14||v===15){addStairsRect(c0,r0,c1,r1,v,stepSize);return}
   removeFramesInRect(c0,r0,c1,r1);
   removeStairsInRect(c0,r0,c1,r1);
   for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)if(mode==='fill'||r===r0||r===r1||c===c0||c===c1)put(c,r,v)
@@ -630,7 +662,7 @@ function stats(){
 }
 let sheets=[],si=0,fileName='Blank',fileId='f1',store={cur:'f1',files:{}};
 function stash(){const s=sheets[si];if(!s)return;s.W=W;s.L=L;s.g=g;s.hist=hist;s.redo=redo;s.sc=sc;s.ox=ox;s.oy=oy;s.boxes=boxes;s.stairs=stairs;}
-function ser(){stash();return{name:fileName,i:si,s:sheets.map(x=>({n:x.n,W:x.W,L:x.L,d:Array.from(x.g,v=>v.toString(36)).join(''),b:(x.boxes||[]).map(b=>({c0:b.c0,r0:b.r0,c1:b.c1,r1:b.r1,n:b.name||''})),stairs:(x.stairs||[]).map(s=>({c0:s.c0,r0:s.r0,c1:s.c1,r1:s.r1,v:s.v}))}))}}
+function ser(){stash();return{name:fileName,i:si,s:sheets.map(x=>({n:x.n,W:x.W,L:x.L,d:Array.from(x.g,v=>v.toString(36)).join(''),b:(x.boxes||[]).map(b=>({c0:b.c0,r0:b.r0,c1:b.c1,r1:b.r1,n:b.name||''})),stairs:(x.stairs||[]).map(s=>({c0:s.c0,r0:s.r0,c1:s.c1,r1:s.r1,v:s.v,ss:s.ss||stepSize}))}))}}
 function save(){store.files[fileId]=ser();store.cur=fileId;try{localStorage.setItem('fp_files',JSON.stringify(store))}catch(e){}}
 function stairsFromLegacy(st,cc,rr){
   const out=[],vis=new Uint8Array(cc*rr),grid=new Uint8Array(cc*rr);
@@ -646,7 +678,7 @@ function stairsFromLegacy(st,cc,rr){
       if(r>0&&!vis[k-cc]&&grid[k-cc]){vis[k-cc]=1;stk.push(k-cc)}
       if(r<rr-1&&!vis[k+cc]&&grid[k+cc]){vis[k+cc]=1;stk.push(k+cc)}
     }
-    out.push({c0,r0,c1,r1,v:14});
+    out.push({c0,r0,c1,r1,v:14,ss:2});
   }
   return out;
 }
@@ -655,7 +687,7 @@ function sheetFrom(x){
   for(let i=0;i<o.g.length&&i<d.length;i++){const v=parseInt(d[i],36);o.g[i]=(v>=0&&v<=T.length)?v:0}
   o.boxes=(x.b||[]).map(b=>({c0:b.c0|0,r0:b.r0|0,c1:b.c1|0,r1:b.r1|0,name:String(b.n||'')}));
   if(Array.isArray(x.stairs)){
-    o.stairs=x.stairs.map(s=>({c0:s.c0|0,r0:s.r0|0,c1:s.c1|0,r1:s.r1|0,v:(s.v===15?15:14)}))
+    o.stairs=x.stairs.map(s=>({c0:s.c0|0,r0:s.r0|0,c1:s.c1|0,r1:s.r1|0,v:(s.v===15?15:14),ss:(s.ss|0)||2}))
       .filter(s=>s.c1>=s.c0&&s.r1>=s.r0&&s.c0>=0&&s.r0>=0&&s.c1<w*2&&s.r1<l*2);
   } else if(typeof x.st==='string' && x.st.indexOf('1')>=0){
     o.stairs=stairsFromLegacy(x.st,w*2,l*2);
@@ -746,7 +778,7 @@ function moveUI(i){popup(p=>{
 },true)}
 const same=(a,b)=>{if(!a||!b)return false;if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true};
 const sameBoxes=(a,b)=>{a=a||[];b=b||[];if(a.length!==b.length)return false;for(let i=0;i<a.length;i++){const x=a[i],y=b[i];if(!x||!y)return false;if(x.c0!==y.c0||x.r0!==y.r0||x.c1!==y.c1||x.r1!==y.r1||x.name!==y.name)return false}return true};
-const sameStairs=(a,b)=>{a=a||[];b=b||[];if(a.length!==b.length)return false;for(let i=0;i<a.length;i++){const x=a[i],y=b[i];if(!x||!y)return false;if(x.c0!==y.c0||x.r0!==y.r0||x.c1!==y.c1||x.r1!==y.r1||x.v!==y.v)return false}return true};
+const sameStairs=(a,b)=>{a=a||[];b=b||[];if(a.length!==b.length)return false;for(let i=0;i<a.length;i++){const x=a[i],y=b[i];if(!x||!y)return false;if(x.c0!==y.c0||x.r0!==y.r0||x.c1!==y.c1||x.r1!==y.r1||x.v!==y.v||(x.ss||2)!==(y.ss||2))return false}return true};
 function snap(){return{g:g.slice(),b:boxes.map(b=>({...b})),s:stairs.map(s=>({...s}))}}
 function commit(){
   const h=hist[hist.length-1];if(!h)return;
@@ -810,9 +842,41 @@ function endDraw(apply){
   }
   if(st.t==='fill'||st.t==='erase') {
     const isStairs=(cur===14||cur===15)&&st.t==='fill';
+    if(isStairs){
+      if(one){
+        if(anchor){
+          if(anchor.c===st.a.c && anchor.r===st.a.r){
+            anchor=null;
+            toast('Point A cancelled');
+          } else {
+            const c0=Math.min(anchor.c,st.a.c),c1=Math.max(anchor.c,st.a.c);
+            const r0=Math.min(anchor.r,st.a.r),r1=Math.max(anchor.r,st.a.r);
+            const len=cur===14?(c1-c0+1):(r1-r0+1);
+            const steps=Math.max(1,Math.round(len/stepSize));
+            const ss=len/steps;
+            addStairsRect(c0,r0,c1,r1,cur,ss);
+            anchor=null;
+            try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}
+          }
+        } else {
+          anchor={c:st.a.c,r:st.a.r};
+          try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
+          toast('Point A: '+cellName(st.a.c,st.a.r)+' — tap B for stairs');
+        }
+      } else {
+        const c0=Math.min(st.a.c,st.b.c),c1=Math.max(st.a.c,st.b.c);
+        const r0=Math.min(st.a.r,st.b.r),r1=Math.max(st.a.r,st.b.r);
+        const len=cur===14?(c1-c0+1):(r1-r0+1);
+        const ss=len/Math.max(1,Math.round(len/stepSize));
+        addStairsRect(c0,r0,c1,r1,cur,ss);
+        anchor=null;
+      }
+      commit();save();stats();
+      return;
+    }
     removeFramesInRect(Math.min(st.a.c,st.b.c), Math.min(st.a.r,st.b.r), Math.max(st.a.c,st.b.c), Math.max(st.a.r,st.b.r));
     rect(st.a,st.b,'fill',st.t==='erase'?0:cur);
-    if(one && !isStairs){ anchor={c:st.a.c,r:st.a.r}; }
+    if(one){ anchor={c:st.a.c,r:st.a.r}; }
   }
   commit();save();stats()
 }
@@ -873,8 +937,32 @@ const up=e=>{
   if(st&&P.size===0){
     if(st.t==='pending'){
       clearTimeout(st.timer);sel=null;const q=pos(e);
-      if(lastTap&&e.timeStamp-lastTap.t<350&&Math.hypot(q.x-lastTap.x,q.y-lastTap.y)<30){lastTap=null;dbl=true}
-      else lastTap={t:e.timeStamp,x:q.x,y:q.y}
+      const isDbl=!anchor && lastTap && e.timeStamp-lastTap.t<350 && Math.hypot(q.x-lastTap.x,q.y-lastTap.y)<30;
+      if(isDbl){lastTap=null;dbl=true;anchor=null}
+      else{
+        lastTap={t:e.timeStamp,x:q.x,y:q.y};
+        const cell=cellAt(q.x,q.y);
+        if(tool==='fill' && (cur===14||cur===15) && cell.c>=0 && cell.c<cols && cell.r>=0 && cell.r<rows){
+          if(anchor){
+            if(anchor.c===cell.c && anchor.r===cell.r){anchor=null;toast('Point A cancelled')}
+            else{
+              const c0=Math.min(anchor.c,cell.c),c1=Math.max(anchor.c,cell.c);
+              const r0=Math.min(anchor.r,cell.r),r1=Math.max(anchor.r,cell.r);
+              const len=cur===14?(c1-c0+1):(r1-r0+1);
+              const steps=Math.max(1,Math.round(len/stepSize));
+              const ss=len/steps;
+              addStairsRect(c0,r0,c1,r1,cur,ss);
+              anchor=null;
+              commit();save();stats();
+              try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}
+            }
+          }else{
+            anchor={c:cell.c,r:cell.r};
+            try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
+            toast('Point A: '+cellName(cell.c,cell.r)+' — tap B for stairs');
+          }
+        }
+      }
     } else if(st.t==='hand') {
       if(e.timeStamp-st.ts<80&&Math.hypot(st.vx,st.vy)>0.2)fling(st.vx*1.5,st.vy*1.5)
     } else {
@@ -986,7 +1074,14 @@ T.forEach((t,i)=>{
   }
 
   b.innerHTML=`<span>${label}</span><small style="color:${txtColor};opacity:0.8">0 sq ft</small>`;
-  b.onclick=()=>{zoomCycle=-1;cur=i+1;pasteMode=false;if(tool==='erase'||tool==='select'||tool==='box'){tool=lastDraw;sel=null;clip=null;anchor=null}ui()};
+  b.onclick=()=>{
+    zoomCycle=-1;
+    cur=i+1;
+    if(i+1!==14 && i+1!==15) anchor=null;
+    pasteMode=false;
+    if(tool==='erase'||tool==='select'||tool==='box'){tool=lastDraw;sel=null;clip=null;anchor=null}
+    ui()
+  };
   $('pal').appendChild(b)
 });
 {
@@ -1053,30 +1148,34 @@ function drawSheet(sh,bw,bh){
   for(const r of findTyped())labelBox(x,X+(r.c0+r.c1+1)*S/2,Y+(r.r0+r.r1+1)*S/2,(r.c1-r.c0+1)*S,(r.r1-r.r0+1)*S,typedItems(r),fsm,'#fff','#111');
   
   if(sh.stairs && sh.stairs.length){
-    let stepNum = 1;
-    for(const s of sh.stairs){
-      const c0=s.c0,r0=s.r0,c1=s.c1,r1=s.r1,v=s.v,w=c1-c0+1,h2=r1-r0+1;
-      x.strokeStyle='#3b82f6';
-      x.lineWidth=Math.max(2,S/5);
-      x.strokeRect(X+c0*S,Y+r0*S,w*S,h2*S);
-      x.lineWidth=Math.max(1.5,S/6);
-      if(v===14){
-        let xp=0;
-        while(xp<w){
-          const sw=Math.min(stepSize,w-xp);
-          if(xp>0){x.beginPath();x.moveTo(X+(c0+xp)*S,Y+r0*S);x.lineTo(X+(c0+xp)*S,Y+(r0+h2)*S);x.stroke();}
-          const its=[{t:'Step '+stepNum,b:true},{t:fmtIn(sw*6)+' × '+fmtIn(h2*6),b:false}];
-          labelBoxRot(x,X+(c0+xp+sw/2)*S,Y+(r0+h2/2)*S,sw*S,h2*S,its,fsm,'#fff','#3b82f6',-Math.PI/2);
-          xp+=sw;stepNum++;
-        }
-      } else if(v===15){
-        let yp=0;
-        while(yp<h2){
-          const shh=Math.min(stepSize,h2-yp);
-          if(yp>0){x.beginPath();x.moveTo(X+c0*S,Y+(r0+yp)*S);x.lineTo(X+(c0+w)*S,Y+(r0+yp)*S);x.stroke();}
-          const its=[{t:'Step '+stepNum,b:true},{t:fmtIn(shh*6)+' × '+fmtIn(w*6),b:false}];
-          labelBox(x,X+(c0+w/2)*S,Y+(r0+yp+shh/2)*S,w*S,shh*S,its,fsm,'#fff','#3b82f6');
-          yp+=shh;stepNum++;
+    const groups=stairsGroups();
+    for(const ids of groups){
+      let stepNum=1;
+      for(const id of ids){
+        const s=sh.stairs[id];
+        const c0=s.c0,r0=s.r0,c1=s.c1,r1=s.r1,v=s.v,ss=s.ss||stepSize,w=c1-c0+1,h2=r1-r0+1;
+        x.strokeStyle='#3b82f6';
+        x.lineWidth=Math.max(2,S/5);
+        x.strokeRect(X+c0*S,Y+r0*S,w*S,h2*S);
+        x.lineWidth=Math.max(1.5,S/6);
+        if(v===14){
+          let xp=0;
+          while(xp<w){
+            const sw=Math.min(ss,w-xp);
+            if(xp>0){x.beginPath();x.moveTo(X+(c0+xp)*S,Y+r0*S);x.lineTo(X+(c0+xp)*S,Y+(r0+h2)*S);x.stroke();}
+            const its=[{t:'Step '+stepNum,b:true},{t:fmtIn(sw*6)+' × '+fmtIn(h2*6),b:false}];
+            labelBoxRot(x,X+(c0+xp+sw/2)*S,Y+(r0+h2/2)*S,sw*S,h2*S,its,fsm,'#fff','#3b82f6',-Math.PI/2);
+            xp+=sw;stepNum++;
+          }
+        } else if(v===15){
+          let yp=0;
+          while(yp<h2){
+            const shh=Math.min(ss,h2-yp);
+            if(yp>0){x.beginPath();x.moveTo(X+c0*S,Y+(r0+yp)*S);x.lineTo(X+(c0+w)*S,Y+(r0+yp)*S);x.stroke();}
+            const its=[{t:'Step '+stepNum,b:true},{t:fmtIn(shh*6)+' × '+fmtIn(w*6),b:false}];
+            labelBox(x,X+(c0+w/2)*S,Y+(r0+yp+shh/2)*S,w*S,shh*S,its,fsm,'#fff','#3b82f6');
+            yp+=shh;stepNum++;
+          }
         }
       }
     }
@@ -1212,6 +1311,7 @@ function stairsUI(p){
     b.onclick=()=>{stepSize=v;updateStairSize();closePopup();draw()};r2.appendChild(b);
   });
   p.appendChild(r2);
+  const tip=document.createElement('div');tip.className='sl';tip.textContent='Tip: tap A then tap B on the plan for auto-sized stairs.';p.appendChild(tip);
 }
 function boxNameUI(p,b){
   const h=document.createElement('div');h.className='sh';h.innerHTML='<span>Frame'+(b.name?' — '+b.name:'')+'</span>';p.appendChild(h);
@@ -1250,7 +1350,7 @@ function saveUI(p){
   r.appendChild(mkb('Backup: this sheet',false,()=>{closePopup();exportBackup(false)}));r.appendChild(mkb('Backup: whole file',false,()=>{closePopup();exportBackup(true)}));
   r=row();r.style.marginTop='6px';r.appendChild(mkb('Import backup file\u2026',false,()=>{closePopup();$('imp').value='';$('imp').click()}))}
 const safeName=n=>(String(n).replace(/[^\w\- ]+/g,'').trim()||'floorplan');
-function backupJson(all){stash();return JSON.stringify({app:'floorplan',v:5,name:fileName,sheets:(all?sheets:[sheets[si]]).map(x=>({n:x.n,W:x.W,L:x.L,d:Array.from(x.g,v=>v.toString(36)).join(''),b:(x.boxes||[]).map(b=>({c0:b.c0,r0:b.r0,c1:b.c1,r1:b.r1,n:b.name||''})),stairs:(x.stairs||[]).map(s=>({c0:s.c0,r0:s.r0,c1:s.c1,r1:s.r1,v:s.v}))}))})}
+function backupJson(all){stash();return JSON.stringify({app:'floorplan',v:6,name:fileName,sheets:(all?sheets:[sheets[si]]).map(x=>({n:x.n,W:x.W,L:x.L,d:Array.from(x.g,v=>v.toString(36)).join(''),b:(x.boxes||[]).map(b=>({c0:b.c0,r0:b.r0,c1:b.c1,r1:b.r1,n:b.name||''})),stairs:(x.stairs||[]).map(s=>({c0:s.c0,r0:s.r0,c1:s.c1,r1:s.r1,v:s.v,ss:s.ss||stepSize}))}))})}
 function exportBackup(all){const u8=new TextEncoder().encode(backupJson(all));
   return deliver(safeName(fileName)+(all?'':' - '+safeName(sheets[si].n))+'.floorplan.json','application/json',u8,null)}
 function parseBackup(txt){const j=JSON.parse(txt);if(!j||j.app!=='floorplan'||!Array.isArray(j.sheets)||!j.sheets.length)throw new Error('bad');
@@ -1306,6 +1406,7 @@ holdable($('md'),()=>{
     setTool('box');
   } else {
     cur = cycleIdx;
+    if(cycleIdx!==14 && cycleIdx!==15) anchor=null;
     setTool(tool === 'box' ? lastDraw : tool);
   }
   ui();
